@@ -301,6 +301,11 @@ function applyView(name, animate = true) {
     focusOn(parts.filter(p => p.system === 'engine' && p.meta.id !== 'PROP').map(p => p.obj), 1.3, V(0.62, 0.16, 0.62));
     return;
   }
+  if (name === 'structure') {
+    state.skin = false; state.system = 'frame'; renderList(); refresh();
+    focusOn(parts.filter(p => p.system === 'frame').map(p => p.obj), 1.2, V(-0.55, 0.62, 0.70));
+    return;
+  }
   if (name === 'avionics') {
     state.skin = false; state.system = 'avionics'; renderList(); refresh();
     focusOn(parts.filter(p => p.system === 'avionics' && p.obj.userData.boundsMM[1][0] < 0).map(p => p.obj), 1.15, V(-0.30, 0.55, 0.85));
