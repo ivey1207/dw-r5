@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DeltaWing DW-R5 · Осмотр (в работе)</title>
+<link rel="stylesheet" href="style.css?v=r5-1">
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/"}}</script>
+</head>
+<body>
+<div id="app">
+  <section id="stage">
+    <canvas id="c" aria-label="3D-модель DeltaWing DW-R5"></canvas>
+    <div id="hud">
+      <span id="status">Загрузка модели…</span>
+    </div>
+    <div id="toolbar">
+      <button id="btn-skin" class="primary">Снять обшивку</button>
+      <button id="btn-ghost" disabled>Контур обшивки</button>
+      <div class="seg" id="seg-section" role="group" aria-label="Разрез">
+        <button data-sec="none" class="on">Без разреза</button>
+        <button data-sec="long">Продольный</button>
+        <button data-sec="trans">Поперечный</button>
+      </div>
+      <label id="sec-pos" hidden>X <input id="sec-x" type="range" min="-650" max="2290" step="5" value="890"><output id="sec-x-out">890 мм</output></label>
+    </div>
+    <div id="views">
+      <button data-view="hero">Общий вид</button>
+      <button data-view="engine-cover">Двигатель как на обложке</button>
+      <button data-view="avionics">Авионика</button>
+      <button data-view="top">Сверху</button>
+      <button data-view="side">Сбоку</button>
+    </div>
+  </section>
+  <aside id="panel">
+    <header>
+      <h1>DeltaWing <span>DW-R5</span></h1>
+      <p class="sub">L275 V3 rev F · промежуточная версия · модель 1:1</p>
+    </header>
+    <div id="systems" class="chips" aria-label="Системы"></div>
+    <div id="parts" class="parts" aria-label="Детали"></div>
+    <div id="card" class="card" hidden>
+      <div class="card-sys" id="card-sys"></div>
+      <h2 id="card-title"></h2>
+      <dl>
+        <dt>Назначение</dt><dd id="card-purpose"></dd>
+        <dt>Происхождение формы</dt><dd id="card-origin"></dd>
+        <dt>Отделка</dt><dd id="card-finish"></dd>
+        <dt>Габарит</dt><dd id="card-size"></dd>
+        <dt id="card-ref-dt" hidden>Визуальный ориентир</dt><dd id="card-ref" hidden></dd>
+      </dl>
+      <div class="row">
+        <button id="btn-focus">Приблизить</button>
+        <button id="btn-hide">Скрыть деталь</button>
+      </div>
+    </div>
+    <div class="row">
+      <button id="btn-showall">Показать всё</button>
+      <button id="btn-reset">Вернуть сборку</button>
+    </div>
+    <button id="btn-xr" class="xr" disabled>Открыть в VR-шлеме · 1:1</button>
+    <p id="xr-note" class="muted">Проверяю поддержку WebXR…</p>
+    <p class="muted small">Мышь: вращение — левая кнопка, сдвиг — правая, масштаб — колесо. Касание: один палец — вращение, два — масштаб и сдвиг. Нажатие на деталь выбирает её, двойное нажатие — приближает.</p>
+    <p class="muted small"><a href="DW-R5.glb" download>Скачать GLB</a></p>
+  </aside>
+</div>
+<script type="module" src="app.js?v=r5-1"></script>
+</body>
+</html>
