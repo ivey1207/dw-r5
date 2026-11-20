@@ -6,7 +6,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 const $ = id => document.getElementById(id);
-const MODEL = new URLSearchParams(location.search).get('model') || 'DW-R5-11200144.glb';
+const MODEL = new URLSearchParams(location.search).get('model') || 'DW-R5-11210128.glb';
 const SYSTEM_ORDER = ['frame', 'controls', 'engine', 'fuel', 'avionics', 'recovery', 'harness', 'payload'];
 const AUTO_FOCUS = new Set(['engine', 'avionics']);
 
@@ -183,8 +183,9 @@ function refresh() {
   // exterior
   exterior.traverse(o => { if (o.isMesh) o.material = state.ghost && !state.skin ? o.userData.ghostMat : o.userData.solidMat; });
   exterior.visible = state.skin || state.ghost || state.system === 'exterior';
-  // interior is hidden behind an opaque, uncut skin: skip drawing it
-  const interiorNeeded = !state.skin || sectionOn;
+  // rev S3: the interior is always drawn. With the skin on, the bridle lug clevises, the hook pin in its pocket, the launch
+  // shoe, the pitot and every bay opened by hiding its cover are seen from outside
+  const interiorNeeded = true;
   parts.forEach(p => {
     const sysOK = state.system === 'all' || p.system === state.system || (state.system === 'engine' && !!p.meta.mountedOnEngine);
     // the engine and propeller protrude through the supplied outer surface: always drawn
