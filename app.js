@@ -6,7 +6,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 const $ = id => document.getElementById(id);
-const MODEL = new URLSearchParams(location.search).get('model') || 'DW-R5-11210128.glb';
+const MODEL = new URLSearchParams(location.search).get('model') || 'DW-R5-11210303.glb';
 const SYSTEM_ORDER = ['frame', 'controls', 'engine', 'fuel', 'avionics', 'recovery', 'harness', 'payload'];
 const AUTO_FOCUS = new Set(['engine', 'avionics']);
 
@@ -105,7 +105,7 @@ loader.load(MODEL, gltf => {
   });
   // skin material for the ghost outline
   exterior.traverse(o => { if (o.isMesh) { o.userData.solidMat = o.material; o.userData.ghostMat = ghostMaterial(o.material); } });
-  buildUI(); applyView('hero', false); refresh();
+  buildUI(); applyView('hero', false); refresh(); setupAssembly();
   $('status').textContent = `${parts.length} деталей · ${countTris()} тыс. треугольников`;
   window.__dw = {ready: true, parts: parts.length};
 }, ev => { if (ev.total) $('status').textContent = `Загрузка ${(ev.loaded / ev.total * 100).toFixed(0)} %`; },
@@ -137,6 +137,25 @@ function buildUI() {
   $('btn-focus').onclick = () => state.selected && focusOn(state.selected.obj, 0.85);
   $('btn-showall').onclick = () => { hidden.clear(); refresh(); };
   $('btn-reset').onclick = resetAll;
+  // exploded view and assembly animation (only on pages that have the controls, e.g. index_r5.html)
+  const on = (id, f) => { const e = $(id); if (e) e.onclick = f; };
+  on('btn-explode', () => setExploded(!exploded));
+  on('btn-assembly', () => startAssembly());
+  on('pl-play', () => togglePlay());
+  on('pl-next', () => stepTo(anim.stage + 1));
+  on('pl-prev', () => stepTo(anim.stage - 1));
+  on('pl-restart', () => stepTo(0, true));
+  on('pl-close', () => stopAssembly());
+  document.querySelectorAll('#pl-speed button').forEach(b => b.onclick = () => {
+    anim.speed = +b.dataset.s; document.querySelectorAll('#pl-speed button').forEach(q => q.classList.toggle('on', q === b));
+  });
+  addEventListener('keydown', e => {
+    if (!anim.on || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input, textarea, select')) return;
+    if (e.code === 'Space') { if (e.target.closest?.('button, a')) return; e.preventDefault(); togglePlay(); }
+    else if (e.code === 'ArrowRight') stepTo(anim.stage + 1);
+    else if (e.code === 'ArrowLeft') stepTo(anim.stage - 1);
+    else if (e.code === 'Escape') stopAssembly();
+  });
 }
 function renderList() {
   const box = $('parts'); box.innerHTML = '';
@@ -157,6 +176,8 @@ function syncList() {
 
 function setSkin(on) { state.skin = on; if (on) state.ghost = false; refresh(); }
 function setSection(s) {
+  if (s !== 'none' && anim.on) stopAssembly();
+  if (s !== 'none' && displaced()) setExploded(false, false);
   state.section = s;
   document.querySelectorAll('#seg-section button').forEach(b => b.classList.toggle('on', b.dataset.sec === s));
   $('sec-pos').hidden = s !== 'trans';
@@ -181,7 +202,7 @@ function refresh() {
   if (sectionOn) updatePlane();
   allMaterials(m => { m.clippingPlanes = sectionOn ? [plane] : []; });
   // exterior
-  exterior.traverse(o => { if (o.isMesh) o.material = state.ghost && !state.skin ? o.userData.ghostMat : o.userData.solidMat; });
+  exterior.traverse(o => { if (o.isMesh && !o.userData.animOrig && !o.userData.origMat) o.material = state.ghost && !state.skin ? o.userData.ghostMat : o.userData.solidMat; });
   exterior.visible = state.skin || state.ghost || state.system === 'exterior';
   // rev S3: the interior is always drawn. With the skin on, the bridle lug clevises, the hook pin in its pocket, the launch
   // shoe, the pitot and every bay opened by hiding its cover are seen from outside
@@ -190,7 +211,7 @@ function refresh() {
     const sysOK = state.system === 'all' || p.system === state.system || (state.system === 'engine' && !!p.meta.mountedOnEngine);
     // the engine and propeller protrude through the supplied outer surface: always drawn
     const external = p.system === 'engine' || !!p.meta.mountedOnEngine;
-    p.obj.visible = Boolean(!hidden.has(p) && sysOK && (p.system === 'exterior' || external ? true : interiorNeeded));
+    p.obj.visible = Boolean(!hidden.has(p) && !animHidden.has(p) && sysOK && (p.system === 'exterior' || external ? true : interiorNeeded));
   });
   if (state.system !== 'all' && state.system !== 'exterior') exterior.visible = state.ghost;
   $('btn-skin').textContent = state.skin ? 'Снять обшивку' : 'Вернуть обшивку';
@@ -211,6 +232,7 @@ function highlight(p, on) {
   });
 }
 function select(p, fromList = false) {
+  if (anim.on && p) { anim.playing = false; untint(p); syncPlayer(); }
   if (state.selected) highlight(state.selected, false);
   state.selected = p;
   if (!p) { select.prevSys = null; $('card').hidden = true; syncList(); xrPanel?.draw(); return; }
@@ -318,19 +340,315 @@ function applyView(name, animate = true) {
   if (!animate && tween) { tween(performance.now() + 1e6); }
 }
 function resetAll() {
+  if (anim.on) stopAssembly(); if (displaced()) setExploded(false, false);
   hidden.clear(); select(null); state.system = 'all'; state.ghost = false; state.skin = true;
   setSection('none'); renderList(); refresh(); applyView('hero');
+}
+
+// ------------------------------------------------------------------ exploded view and assembly animation
+// assembly_r5.json (cad/assembly5.py): the build stages in the order of build/assembly_sequence_r5_s3.md, and for
+// every part the direction it is installed from, its attachment text and the parts it touches (exact contact graph,
+// qa5). Positions are offsets of the part nodes; their parents are unrotated and unscaled, so an offset is in metres
+// of the model (root) frame. Boxes are kept in the root frame too, so VR placement does not disturb them.
+let asm = null, exploded = false;
+const animHidden = new Set();                     // parts not yet installed in the assembly animation
+const tints = new Set();                          // parts with a temporary highlight
+const fx = [];                                    // position tweens {p, from, to, t0, ms, clock, done}
+const anim = {on: false, playing: false, stage: 0, speed: 1, clock: 0, last: 0, events: [], landed: new Set(), finished: false,
+              cur: null, manual: false};
+const partById = new Map();
+const asmReady = () => !!setupAssembly.done;
+if ($('player')) fetch('assembly_r5.json?v=' + encodeURIComponent(MODEL)).then(r => r.ok ? r.json() : null)
+  .then(d => { asm = d; setupAssembly(); }).catch(() => {});
+
+// mm in CAD axes (X aft, Y right, Z up) for a part centred at c. spread = false gives the pure installation path (the
+// assembly animation flies along it); spread = true adds a separation of neighbours for the exploded view.
+function cadOffset(dir, c, spread = true) {
+  const s = Math.sign(c.y) || 1, wing = Math.abs(c.y) >= 530, k = spread ? 1 : 0, sx = (c.x - 800) * k, sy = c.y * k;
+  if (Array.isArray(dir)) return [dir[0], dir[1] * s, dir[2]];
+  switch (dir) {
+    case 'shell_down': return [0, wing ? s * 140 : 0, -650];
+    case 'shell_up': return [0, wing ? s * 140 : 0, 1150];
+    case 'top': return [sx * 0.15, sy * 0.3, 1420];
+    case 'caps_up': return [sx * 0.2, sy * 0.4, 840];
+    case 'belly': return [sx * 0.2, wing ? s * 150 : sy * 0.3, -1050];
+    case 'down': return [0, s * 150, -820];
+    case 'fwd': return [-650, 0, 0];
+    case 'aft': return [650, sy * 0.3, 0];
+    case 'engine': return [850 + (c.x - 1960) * 0.9 * k, sy * 1.3, (c.z + 20) * 1.4 * k];
+    case 'engine_core': return spread ? [850 + (c.x - 1960) * 0.9, sy * 1.3, (c.z + 20) * 1.4] : [900, 0, 0];
+    case 'prop': return [1500, 0, 0];
+    case 'outaft': return [380, s * 320, 0];
+    case 'winglet': return [0, s * 700, 280];
+    case 'sys_up': return wing ? [0, s * 450, 460] : [sx * 0.3, sy * 0.6, 720];
+    default: return wing ? [0, s * (600 + (Math.abs(c.y) - 530) * 0.15), 230] : [sx * 0.35, sy * 0.6, 420];
+  }
+}
+function setupAssembly() {
+  if (!asm || !parts.length || setupAssembly.done || !$('player')) return;
+  const stageOf = new Map(); asm.stages.forEach((st, i) => st.parts.forEach(id => stageOf.set(id, i)));
+  const unknown = parts.filter(p => !stageOf.has(p.meta.id));
+  if (unknown.length) {                            // parts the data does not know: a trailing stage of their own
+    console.warn('assembly_r5.json: no stage for', unknown.map(p => p.meta.id));
+    asm.stages.push({title: 'Прочие детали', note: 'Детали, которых нет в данных сборки (assembly_r5.json).', parts: unknown.map(p => p.meta.id)});
+    unknown.forEach(p => stageOf.set(p.meta.id, asm.stages.length - 1));
+  }
+  root.updateMatrixWorld(true);
+  const toRoot = root.matrixWorld.clone().invert();
+  parts.forEach(p => {
+    partById.set(p.meta.id, p);
+    p.home = p.obj.position.clone(); p.t = 0;
+    p.asm = asm.parts[p.meta.id] || {dir: 'struct', how: '', to: []};
+    p.stage = stageOf.get(p.meta.id);
+    const b = p.meta.boundsMM, c = b ? {x: (b[0][0] + b[1][0]) / 2, y: (b[0][1] + b[1][1]) / 2, z: (b[0][2] + b[1][2]) / 2} : {x: 800, y: 0, z: 0};
+    const [dx, dy, dz] = cadOffset(p.asm.dir, c), [ex, ey, ez] = cadOffset(p.asm.dir, c, false);
+    p.off = new THREE.Vector3(dx / 1000, dz / 1000, -dy / 1000);      // glTF: (X, Z, -Y); exploded view
+    p.path = new THREE.Vector3(ex / 1000, ez / 1000, -ey / 1000);     // assembly animation: straight installation path
+    p.box0 = new THREE.Box3().setFromObject(p.obj).applyMatrix4(toRoot);
+  });
+  setupAssembly.done = true;
+  $('btn-explode').disabled = false; $('btn-assembly').disabled = false;
+  xrPanel?.draw();
+}
+function place(p) { p.obj.position.copy(p.home).addScaledVector(anim.on ? p.path : p.off, p.t); }
+const displaced = () => parts.some(p => p.t !== undefined && p.t !== 0);
+function dropTween(p) { for (let i = fx.length - 1; i >= 0; i--) if (fx[i].p === p) fx.splice(i, 1); }
+function tweenPart(p, to, ms, delay = 0, done = null, clock = 'real') {
+  dropTween(p);
+  const now = clock === 'anim' ? anim.clock : performance.now();
+  if (ms <= 0) { p.t = to; place(p); done?.(); return; }
+  fx.push({p, from: p.t, to, t0: now + delay, ms, clock, done});
+}
+function animTick(now) {
+  const dt = anim.last ? Math.min(100, now - anim.last) : 0; anim.last = now;
+  if (anim.on && anim.playing && !anim.manual) anim.clock += dt * anim.speed;
+  for (let i = fx.length - 1; i >= 0; i--) {
+    const f = fx[i]; if (!f) continue;
+    const tnow = f.clock === 'anim' ? anim.clock : now;
+    const k = Math.min(1, Math.max(0, (tnow - f.t0) / f.ms)), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    f.p.t = f.from + (f.to - f.from) * e; place(f.p);
+    if (k >= 1) { fx.splice(fx.indexOf(f), 1); f.done?.(); }
+  }
+  if (anim.on && anim.playing) {
+    anim.events.sort((a, b) => a.at - b.at);
+    while (anim.events.length && anim.events[0].at <= anim.clock) anim.events.shift().fn();
+  }
+}
+function later(ms, fn) { anim.events.push({at: anim.clock + ms, fn}); }
+function advance(ms) { anim.clock += ms * anim.speed; animTick(anim.last || performance.now()); }   // video recording (anim.manual)
+
+// temporary highlight of a part (orange = being installed, teal = what it is attached to)
+function tint(p, color, k) {
+  untint(p);
+  p.meshes.forEach(m => {
+    if (m.userData.origMat) return;
+    m.userData.animOrig = m.material;
+    const c = m.material.clone(); patch(c, {cap: !(c.name === 'skin' || c.name === 'elevon')});
+    c.emissive = new THREE.Color(color); c.emissiveIntensity = k; c.clippingPlanes = m.material.clippingPlanes;
+    m.material = c;
+  });
+  tints.add(p);
+}
+function untint(p) {
+  if (!tints.has(p)) return;
+  p.meshes.forEach(m => { if (m.userData.animOrig) { m.material.dispose(); m.material = m.userData.animOrig; delete m.userData.animOrig; } });
+  tints.delete(p);
+}
+function clearTints() { [...tints].forEach(untint); }
+
+// box of the parts at explode fraction t, in the root frame (which = all parts, or only those drawn now)
+function kitBox(t, which = 'all') {
+  const b = new THREE.Box3(), o = new THREE.Vector3();
+  const use = p => p.box0 && !p.box0.isEmpty() && (which === 'all' ? !hidden.has(p) : isShown(p.obj));
+  let list = parts.filter(use); if (!list.length) list = parts.filter(p => p.box0 && !p.box0.isEmpty());
+  list.forEach(p => { o.copy(anim.on ? p.path : p.off).multiplyScalar(t); b.union(p.box0.clone().translate(o)); });
+  return b;
+}
+function frameBox(bLocal, fill = 1.0, dir = V(-0.62, 0.42, 0.70), liftPx = 0) {
+  if (renderer.xr.isPresenting || bLocal.isEmpty()) return;
+  root.updateMatrixWorld(true);
+  const b = bLocal.clone().applyMatrix4(root.matrixWorld);
+  const sph = b.getBoundingSphere(new THREE.Sphere()), d = dir.clone().normalize();
+  const vfov = THREE.MathUtils.degToRad(camera.fov), hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
+  const dist = sph.radius / Math.tan(Math.min(vfov, hfov) / 2) / fill;
+  const pos = sph.center.clone().add(d.clone().multiplyScalar(dist)), tgt = sph.center.clone();
+  if (liftPx) {                                     // shift the image up so a panel over the bottom does not hide it
+    const h = canvas.clientHeight || 1, k = liftPx / (h / 2) * dist * Math.tan(vfov / 2);
+    const fwd = d.clone().negate(), up = V(0, 1, 0).sub(fwd.clone().multiplyScalar(fwd.y)).normalize();
+    pos.addScaledVector(up, -k); tgt.addScaledVector(up, -k);
+  }
+  flyTo(pos, tgt, null, 900);
+}
+function playerLift() { const e = $('player'); return e && !e.hidden && getComputedStyle(e).position === 'absolute' ? e.offsetHeight * 0.55 : 0; }
+
+// VR: parts thrown below the root would end up under the floor; lift the root while displaced, put it back afterwards
+function xrLift(on) {
+  if (!renderer.xr.isPresenting) return;
+  if (on && !root.userData.xrPose) {
+    root.userData.xrPose = {p: root.position.clone(), q: root.quaternion.clone()};
+    root.updateMatrixWorld(true);
+    const minY = kitBox(1).applyMatrix4(root.matrixWorld).min.y;
+    if (minY < 0.05) root.position.y += 0.05 - minY;
+  } else if (!on && root.userData.xrPose) {
+    root.position.copy(root.userData.xrPose.p); root.quaternion.copy(root.userData.xrPose.q); delete root.userData.xrPose;
+  }
+}
+
+// "Разнести детали": every part moves out along the direction it is installed from (last installed leaves first)
+function setExploded(on, animate = true) {
+  if (!asmReady()) return;
+  if (anim.on) stopAssembly();
+  if (on && state.section !== 'none') setSection('none');
+  exploded = on;
+  const n = asm.stages.length;
+  if (on) xrLift(true);
+  parts.forEach(p => tweenPart(p, on ? 1 : 0, animate ? 950 : 0, animate ? (on ? n - 1 - p.stage : p.stage) * 45 : 0));
+  clearTimeout(setExploded.timer);
+  if (!on) setExploded.timer = setTimeout(() => { if (!exploded && !anim.on) xrLift(false); }, animate ? n * 45 + 1000 : 0);
+  $('btn-explode').textContent = on ? 'Собрать детали' : 'Разнести детали';
+  $('btn-explode').classList.toggle('on', on);
+  if (animate) frameBox(on ? kitBox(1, 'shown') : kitBox(0, 'shown'), on ? 1.05 : 1.45);
+  xrPanel?.draw();
+}
+
+// "Как собирается": stage by stage the parts fly in from their exploded positions, one at a time (symmetric right and
+// left parts together). When a part lands, the parts it is attached to light up and the caption says how it is attached.
+const FLY = 800;
+const dwellOf = beat => Math.min(2200, Math.max(900, 700 + 9 * Math.max(...beat.map(p => (p.asm.how || '').length), 0)));
+function beatsOf(i) {
+  const ids = asm.stages[i].parts, list = ids.map(id => partById.get(id)).filter(Boolean);
+  const key = id => id.replace(/^(PNL_SHL)_[RL]_/, '$1__').replace(/_[RL](\d?)$/, '_$1').replace(/_[RL](\d)(?=_|$)/, '_$1');
+  const m = new Map();
+  list.forEach(p => { const k = key(p.meta.id); if (!m.has(k)) m.set(k, []); m.get(k).push(p); });
+  return [...m.values()];
+}
+function restoreView() {                          // the animation shows the whole aircraft with its skin
+  if (!state.skin || state.system !== 'all' || state.ghost || hidden.size) {
+    state.skin = true; state.system = 'all'; state.ghost = false; hidden.clear(); renderList();
+  }
+}
+function startAssembly() {
+  if (!asmReady()) return;
+  if (anim.on) { stepTo(0, true); return; }
+  select(null); restoreView();
+  if (state.section !== 'none') setSection('none');
+  exploded = false; $('btn-explode').textContent = 'Разнести детали'; $('btn-explode').classList.remove('on');
+  fx.length = 0;
+  Object.assign(anim, {on: true, playing: true, finished: false, clock: 0, events: []});
+  $('player').hidden = false; $('toolbar').hidden = true;
+  resize(); xrLift(true);
+  frameBox(kitBox(0.22), 1.12, undefined, playerLift());
+  stepTo(0, true);
+}
+function stopAssembly() {
+  if (!anim.on) return;
+  anim.on = false; anim.playing = false; anim.events = []; anim.cur = null; anim.manual = false;
+  fx.length = 0; clearTints(); animHidden.clear();
+  parts.forEach(p => { p.t = 0; place(p); });
+  if ($('player')) { $('player').hidden = true; $('toolbar').hidden = false; }
+  xrLift(false); resize();
+  refresh(); xrPanel?.draw();
+}
+function togglePlay() {
+  if (!asmReady()) return;
+  if (!anim.on) { startAssembly(); return; }
+  if (anim.finished) { stepTo(0, true); return; }
+  anim.playing = !anim.playing;
+  if (anim.playing) {                             // resume: drop the inspection state made while paused
+    select(null); restoreView(); refresh();
+    beatsOf(anim.stage).flat().forEach(p => { if (!anim.landed.has(p) && p.t > 0 && !tints.has(p)) tint(p, 0xff7a2e, 0.4); });
+  }
+  syncPlayer(); xrPanel?.draw();
+}
+function stepTo(i, play = null) {
+  if (!anim.on || !asm) return;
+  if (i < 0 || i >= asm.stages.length) return;
+  if (anim.finished && i > anim.stage) return;
+  if (play !== null) anim.playing = play;
+  anim.events = []; anim.finished = false; anim.cur = null; anim.landed.clear();
+  fx.length = 0; clearTints(); select(null); restoreView();
+  anim.stage = i;
+  parts.forEach(p => {
+    if (p.stage < i) { p.t = 0; animHidden.delete(p); } else { p.t = 1; animHidden.add(p); }
+    place(p);
+  });
+  const beats = beatsOf(i);
+  beats.flat().forEach(p => animHidden.delete(p));
+  refresh();
+  beats.flat().forEach(p => tint(p, 0xff7a2e, 0.4));
+  caption();
+  let t = 900;                                   // stage title first, then one beat after another
+  beats.forEach(beat => {
+    later(t, () => { anim.cur = beat; caption(); beat.forEach((p, k) => tweenPart(p, 0, FLY, 0, k ? null : () => land(beat), 'anim')); });
+    t += FLY + dwellOf(beat);
+  });
+  later(t + 500, () => {
+    if (i + 1 < asm.stages.length) stepTo(i + 1);
+    else { anim.finished = true; anim.playing = false; anim.cur = null; clearTints(); caption(); syncPlayer(); xrPanel?.draw(); }
+  });
+  syncPlayer(); xrPanel?.draw();
+}
+function land(beat) {
+  beat.forEach(p => { anim.landed.add(p); untint(p); });
+  const mates = [...new Set(beat.flatMap(installedMates))].filter(q => !beat.includes(q)).slice(0, 10);
+  mates.forEach(q => { if (!tints.has(q)) tint(q, 0x1f9d84, 0.55); });
+  later(dwellOf(beat), () => mates.forEach(q => { if (q.stage !== anim.stage || anim.landed.has(q)) untint(q); }));
+}
+function installedMates(p) {
+  return (p.asm.to || []).map(id => partById.get(id))
+    .filter(q => q && !hidden.has(q) && (q.stage < anim.stage || anim.landed.has(q)));
+}
+const SIDE = /,?\s*(правый|левый|правая|левая|правое|левое|правые|левые)(?=$|[\s,.;)])/g;   // no \b: it is ASCII-only
+const shortTitle = t => t.replace(/\s*\([^)]*\)\s*$/, '').replace(/,\s*(правый|левый|правая|левая|правое|левое)$/, ' $1');
+function beatTitle(beat) {
+  return beat.length > 1 && beat[0].asm.pair ? beat[0].asm.pair : shortTitle(beat[0].meta.title);
+}
+function captionText() {
+  if (!anim.on || !asm) return null;
+  const st = asm.stages[anim.stage], n = asm.stages.length;
+  if (anim.finished) return {step: `Готово · ${n} этапов, ${parts.length} деталей`, title: 'Самолёт собран', note: 'Нажмите «С начала», чтобы посмотреть ещё раз, или «Закрыть», чтобы вернуться к осмотру.', part: null};
+  const beat = anim.cur;
+  let part = null;
+  if (beat) {
+    const mates = [...new Set(beat.flatMap(installedMates).filter(q => !beat.includes(q)).map(q => shortTitle(q.meta.title).replace(SIDE, '').replace(/\s+/g, ' ').trim()))];
+    part = {title: beatTitle(beat), to: mates.length ? mates.slice(0, 4).join(', ') + (mates.length > 4 ? ` и ещё ${mates.length - 4}` : '') : '',
+            how: beat[0].asm.how || ''};
+  }
+  return {step: `Этап ${anim.stage + 1} из ${n}`, title: st.title, note: st.note, part};
+}
+function caption() {
+  const c = captionText(); if (!c || !$('player')) return;
+  $('pl-step').textContent = c.step; $('pl-title').textContent = c.title; $('pl-note').textContent = c.note;
+  const box = $('pl-part'); box.textContent = '';
+  if (c.part) {
+    const b = document.createElement('b'); b.textContent = c.part.title; box.append(b);
+    if (c.part.to) box.append(document.createTextNode(' → крепится к: ' + c.part.to));
+    if (c.part.how) { const h = document.createElement('span'); h.className = 'how'; h.textContent = 'Как: ' + c.part.how; box.append(h); }
+  }
+  const n = asm.stages.length;
+  $('pl-bar').style.width = (anim.finished ? 100 : (anim.stage + 0.5) / n * 100) + '%';
+  xrPanel?.draw();
+}
+function syncPlayer() {
+  const b = $('pl-play'); if (!b) return;
+  b.textContent = anim.finished ? 'С начала' : (anim.playing ? 'Пауза' : 'Дальше');
+  b.title = anim.finished ? 'С начала' : (anim.playing ? 'Пауза (пробел)' : 'Дальше (пробел)');
+  $('pl-prev').disabled = !anim.on || anim.stage <= 0;
+  $('pl-next').disabled = !anim.on || anim.finished || anim.stage >= (asm?.stages.length || 1) - 1;
 }
 
 // ------------------------------------------------------------------ resize / loop
 function resize() {
   if (renderer.xr.isPresenting) return;
-  const r = canvas.parentElement.getBoundingClientRect();
+  const r = canvas.getBoundingClientRect();
+  if (!r.width || !r.height) return;
   renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize); resize();
+if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(canvas);
 renderer.setAnimationLoop(now => {
   if (tween) tween(now);
+  animTick(now);
   if (!renderer.xr.isPresenting) controls.update();
   if (state.section !== 'none') updatePlane();
   xrTick();
@@ -386,7 +704,8 @@ function bringToHand(obj) {
   // move the whole model so the chosen part sits ~0.55 m in front of the eyes (arm's length)
   const cam = renderer.xr.getCamera(); const eye = new THREE.Vector3().setFromMatrixPosition(cam.matrixWorld);
   const fwd = V(0, 0, -1).applyQuaternion(new THREE.Quaternion().setFromRotationMatrix(cam.matrixWorld)); fwd.y = 0; fwd.normalize();
-  const c = boxOf(obj).getCenter(new THREE.Vector3());
+  const b = boxOf(obj); if (b.isEmpty()) return;
+  const c = b.getCenter(new THREE.Vector3());
   root.position.add(eye.clone().add(fwd.multiplyScalar(0.55)).sub(c));
 }
 function xrTick() {
@@ -404,9 +723,9 @@ function xrTick() {
 
 // in-headset panel (canvas texture)
 function makePanel() {
-  const W = 1024, H = 720, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const W = 1024, H = 940, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d'); const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.225), new THREE.MeshBasicMaterial({map: tex, toneMapped: false, transparent: true}));
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.32 * H / W), new THREE.MeshBasicMaterial({map: tex, toneMapped: false, transparent: true}));
   mesh.position.set(0, 0.06, -0.12); mesh.rotation.x = -0.75;
   const systems = ['all', ...SYSTEM_ORDER.filter(k => SYSTEM_TITLES[k])];
   const buttons = [
@@ -418,6 +737,10 @@ function makePanel() {
     {t: () => 'Скрыть деталь', f: () => state.selected && hidePart(state.selected)},
     {t: () => 'Показать всё', f: () => { hidden.clear(); refresh(); }},
     {t: () => 'Вернуть сборку', f: () => { resetAll(); root.position.set(-0.8, 1.0, -2.1); root.quaternion.identity(); }},
+    {t: () => exploded ? 'Собрать детали' : 'Разнести детали', f: () => setExploded(!exploded), on: () => exploded, ok: asmReady},
+    {t: () => !anim.on ? 'Как собирается ▶' : (anim.finished ? 'Сборка: с начала' : (anim.playing ? 'Сборка: пауза' : 'Сборка: дальше')), f: () => togglePlay(), on: () => anim.on, ok: asmReady},
+    {t: () => 'Следующий этап ▶▶', f: () => anim.on ? (!anim.finished && stepTo(anim.stage + 1)) : startAssembly(), ok: asmReady},
+    {t: () => 'Закрыть сборку', f: () => stopAssembly(), ok: () => anim.on},
   ];
   const cell = (i) => ({x: 24 + (i % 2) * 496, y: 210 + Math.floor(i / 2) * 120, w: 480, h: 104});
   function wrap(text, x, y, maxW, lh, maxLines) {
@@ -427,15 +750,24 @@ function makePanel() {
   }
   function draw() {
     g.fillStyle = 'rgba(241,243,239,0.96)'; g.fillRect(0, 0, W, H);
-    g.fillStyle = '#c4562a'; g.font = '600 26px system-ui'; g.fillText(state.selected ? (SYSTEM_TITLES[state.selected.system] || '') : 'DeltaWing DW-R4 · 1:1', 28, 46);
-    g.fillStyle = '#1d2622'; g.font = '600 36px system-ui'; wrap(state.selected ? state.selected.meta.title : 'Наведите луч и нажмите курок, чтобы выбрать деталь', 28, 92, 968, 40, 1);
-    g.fillStyle = '#4b5852'; g.font = '24px system-ui'; wrap(state.selected?.meta.purpose || 'Рукоять — взять и повернуть модель. Кнопки ниже управляют обшивкой, разрезом и системами.', 28, 138, 968, 30, 2);
+    const cap = captionText();
+    if (cap && (!state.selected || anim.playing)) {
+      g.fillStyle = '#c4562a'; g.font = '600 26px system-ui'; g.fillText(cap.step + ' · ' + cap.title, 28, 46);
+      g.fillStyle = '#1d2622'; g.font = '600 32px system-ui';
+      wrap(cap.part ? cap.part.title + (cap.part.to ? ' → ' + cap.part.to : '') : cap.note, 28, 92, 968, 38, 1);
+      g.fillStyle = '#4b5852'; g.font = '24px system-ui'; wrap(cap.part ? (cap.part.how ? 'Как: ' + cap.part.how : cap.note) : '', 28, 138, 968, 30, 2);
+    } else {
+      g.fillStyle = '#c4562a'; g.font = '600 26px system-ui'; g.fillText(state.selected ? (SYSTEM_TITLES[state.selected.system] || '') : 'DeltaWing DW-R5 · 1:1', 28, 46);
+      g.fillStyle = '#1d2622'; g.font = '600 36px system-ui'; wrap(state.selected ? state.selected.meta.title : 'Наведите луч и нажмите курок, чтобы выбрать деталь', 28, 92, 968, 40, 1);
+      g.fillStyle = '#4b5852'; g.font = '24px system-ui'; wrap(state.selected?.meta.purpose || 'Рукоять — взять и повернуть модель. Кнопки ниже: обшивка, разрез, системы, разнос деталей и анимация сборки.', 28, 138, 968, 30, 2);
+    }
     buttons.forEach((b, i) => { const c = cell(i); const on = b.on?.();
+      const ok = b.ok ? b.ok() : true;
       g.fillStyle = on ? '#24533f' : '#ffffff'; g.strokeStyle = '#9fb0a6'; g.lineWidth = 3; g.beginPath(); g.roundRect(c.x, c.y, c.w, c.h, 14); g.fill(); g.stroke();
-      g.fillStyle = on ? '#fff' : '#1d2622'; g.font = '600 30px system-ui'; g.fillText(b.t(), c.x + 22, c.y + 62); });
+      g.fillStyle = on ? '#fff' : (ok ? '#1d2622' : '#a9b2ad'); g.font = '600 30px system-ui'; g.fillText(b.t(), c.x + 22, c.y + 62); });
     tex.needsUpdate = true;
   }
-  function click(uv) { const x = uv.x * W, y = (1 - uv.y) * H; buttons.forEach((b, i) => { const c = cell(i); if (x > c.x && x < c.x + c.w && y > c.y && y < c.y + c.h) { b.f(); draw(); } }); }
+  function click(uv) { const x = uv.x * W, y = (1 - uv.y) * H; buttons.forEach((b, i) => { const c = cell(i); if (x > c.x && x < c.x + c.w && y > c.y && y < c.y + c.h && (!b.ok || b.ok())) { b.f(); draw(); } }); }
   const left = controllers.find(c => c.userData.hand === 'left'); if (left) left.add(mesh);
   return {mesh, draw, click};
 }
@@ -452,4 +784,5 @@ async function snap(name, w = 2400, h = 1500) {
 function setCam(p, t, fov) { tween = null; camera.position.set(...p); controls.target.set(...t); if (fov) camera.fov = fov; camera.updateProjectionMatrix(); controls.update(); }
 function camState() { return [camera.position.toArray(), controls.target.toArray(), camera.fov]; }
 window.__dwApi = {setCam, camState, renderNow, snap, camera, controls, root, THREE, applyView, setSkin, setSection, chooseSystem, select, focusOn, hidePart, resetAll, parts, state, refresh,
+  setExploded, startAssembly, stopAssembly, stepTo, togglePlay, anim, kitBox, frameBox, advance, captionText, renderer,
   byId: id => parts.find(p => p.meta.id === id)};

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DeltaWing DW-R5 · Осмотр</title>
-<link rel="stylesheet" href="style.css?v=r5-2">
+<link rel="stylesheet" href="style.css?v=r5-5">
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/"}}</script>
 </head>
 <body>
@@ -15,6 +15,8 @@
       <span id="status">Загрузка модели…</span>
     </div>
     <div id="toolbar">
+      <button id="btn-explode" disabled title="Разнести все детали по направлениям, откуда их ставят при сборке">Разнести детали</button>
+      <button id="btn-assembly" class="accent" disabled title="Анимация сборки по шагам: что куда и как крепится">Как собирается ▶</button>
       <button id="btn-skin" class="primary">Снять обшивку</button>
       <button id="btn-ghost" disabled>Контур обшивки</button>
       <div class="seg" id="seg-section" role="group" aria-label="Разрез">
@@ -23,6 +25,25 @@
         <button data-sec="trans">Поперечный</button>
       </div>
       <label id="sec-pos" hidden>X <input id="sec-x" type="range" min="-650" max="2290" step="5" value="890"><output id="sec-x-out">890 мм</output></label>
+    </div>
+    <div id="player" hidden aria-live="polite">
+      <div class="cap">
+        <div class="cap-step" id="pl-step"></div>
+        <div class="cap-title" id="pl-title"></div>
+        <div class="cap-note" id="pl-note"></div>
+        <div class="cap-part" id="pl-part"></div>
+      </div>
+      <div class="bar"><span id="pl-bar"></span></div>
+      <div class="ctl">
+        <button id="pl-restart" title="С начала">С начала</button>
+        <button id="pl-prev" title="Предыдущий этап (←)">◀ Этап</button>
+        <button id="pl-play" class="primary" title="Пауза (пробел)">Пауза</button>
+        <button id="pl-next" title="Следующий этап (→)">Этап ▶</button>
+        <div class="seg" id="pl-speed" role="group" aria-label="Скорость">
+          <button data-s="0.5">0,5×</button><button data-s="1" class="on">1×</button><button data-s="2">2×</button><button data-s="4">4×</button>
+        </div>
+        <button id="pl-close" title="Закрыть анимацию (Esc)">Закрыть</button>
+      </div>
     </div>
     <div id="views">
       <button data-view="hero">Общий вид</button>
@@ -61,10 +82,10 @@
     </div>
     <button id="btn-xr" class="xr" disabled>Открыть в VR-шлеме · 1:1</button>
     <p id="xr-note" class="muted">Проверяю поддержку WebXR…</p>
-    <p class="muted small">Мышь: вращение — левая кнопка, сдвиг — правая, масштаб — колесо. Касание: один палец — вращение, два — масштаб и сдвиг. Нажатие на деталь выбирает её, двойное нажатие — приближает.</p>
-    <p class="muted small"><a href="DW-R5-11210128.glb" download>Скачать GLB</a></p>
+    <p class="muted small">Мышь: вращение — левая кнопка, сдвиг — правая, масштаб — колесо. Касание: один палец — вращение, два — масштаб и сдвиг. Нажатие на деталь выбирает её, двойное нажатие — приближает. «Разнести детали» раскладывает самолёт по направлениям сборки; «Как собирается» показывает сборку по этапам, деталь за деталью: к чему и как она крепится. Пробел — пауза, стрелки — этапы, Esc — выход.</p>
+    <p class="muted small"><a href="DW-R5-11210303.glb" download>Скачать GLB</a> · <a href="DW-R5_assembly.mp4">Видео сборки (MP4)</a></p>
   </aside>
 </div>
-<script type="module" src="app.js?v=DW-R5-11210128.glb"></script>
+<script type="module" src="app.js?v=DW-R5-11210303.glb"></script>
 </body>
 </html>
