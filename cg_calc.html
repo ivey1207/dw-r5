@@ -252,13 +252,14 @@ U = Σ F_i·u_i / W = X·cos θ + Z·sin θ   →   Z = (U − X·cos θ) / sin 
    ======================================================================================== */
 /*CFG-BEGIN*/
 const CFG = {
-  version: 'cg_calc 1.0 · DW-R5 rev S3 · 2026-11-21',
+  version: 'cg_calc 1.1 · DW-R5 rev S3 · стенд rig5 · 2026-11-21',
   rig: {
     // Передняя опора F: низ пальца HK Ø10 (ось пальца Z −174). Опора касается пальца снизу, реакция проходит через ось.
     F: {x: 626, y: 0, z: -179, pinR: 5},
-    // Задние опоры: центры шаровых опор в конических гнёздах башмака LB (Ø22 в устье → Ø16 на глубине 10 мм).
-    R: {x: 1190, y: 80, z: -171},
-    L: {x: 1190, y: -80, z: -171},
+    // Задние опоры: центры шаровых опор SR10 в конических гнёздах башмака LB (Ø22 в устье → Ø16 на глубине 10 мм);
+    // по rig_r5.json (cad/rig5.py): сфера садится на конус по окружности Ø19,16 на Z −170,9, центр сферы — Z −173,78.
+    R: {x: 1190, y: 80, z: -173.78},
+    L: {x: 1190, y: -80, z: -173.78},
     spacer: 100,            // проставка под передней опорой для наклона, мм
     file: 'rig_r5.json'     // точные значения от конструктора стенда (необязательный файл рядом со страницей)
   },
@@ -535,6 +536,7 @@ function num(s) {
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
 const PILL = {ok: 'норма', warn: 'внимание', bad: 'вне допуска', na: 'нет данных', info: 'справка'};
+const NOTE_PILL = {bad: 'ошибка', warn: 'внимание', info: 'справка'};
 const pill = (lvl, txt) => '<span class="pill ' + lvl + '">' + esc(txt || PILL[lvl]) + '</span>';
 const worst = list => list.indexOf('bad') >= 0 ? 'bad' : list.indexOf('warn') >= 0 ? 'warn' : list.indexOf('ok') >= 0 ? 'ok' : 'na';
 
@@ -674,7 +676,7 @@ function notesOf(r, inp) {
 function renderResults(r, inp) {
   const notes = notesOf(r, inp);
   $('notes-wrap').hidden = !notes.length;
-  $('notes').innerHTML = notes.map(n => '<li>' + pill(n[0]) + '<span>' + esc(n[1]) + '</span></li>').join('');
+  $('notes').innerHTML = notes.map(n => '<li>' + pill(n[0], NOTE_PILL[n[0]]) + '<span>' + esc(n[1]) + '</span></li>').join('');
   // самопроверка
   const st = $('selftest');
   if (selfSnap && selfSnap === snapReadings() && r.ok) {
@@ -704,7 +706,9 @@ function renderResults(r, inp) {
     [cb, 'Правило балласта: ЦТ без топлива не дальше X ' + fmt(inp.target, 1), 'сейчас X ' + fmt(zf.x, 1) + (cb === 'ok' ? '' : ' — добавить балласт, см. ниже')],
     [cz, 'Высота ЦТ: |Z| не больше ' + L.zAbs + ' мм от плоскости крыла', r.zMeasured ? 'без топлива Z ' + fmt(zf.z, 1) + ' · взлёт ' + fmt(to.z, 1) + (inp.fuel > 0 ? ' — недостоверно, взвешивание с топливом' : '') : 'Z не измерен — нужны показания с наклоном'],
     [cy, 'Боковое смещение |Y| до ' + L.yOk + ' мм', 'без топлива Y ' + fmt(zf.y, 1) + ' мм (модель ' + fmt(CFG.model.zf.y, 1) + '); до ' + L.yMax + ' мм — проверить триммирование по крену, больше — искать причину'],
-    [cm, 'Взлётная масса ' + CFG.mtow + ' кг и заправка', zf.m >= CFG.mtow ? 'масса без топлива ' + fmt(zf.m, 2) + ' кг — заправка невозможна' : 'заправка до MTOW ' + fmt(r.to.L, 1) + ' л (' + fmt(r.to.L * CFG.fuel.rho, 1) + ' кг); в модели ' + fmt(CFG.model.to.L, 1) + ' л']
+    [cm, 'Взлётная масса ' + CFG.mtow + ' кг и заправка', zf.m >= CFG.mtow ? 'масса без топлива ' + fmt(zf.m, 2) + ' кг — заправка невозможна'
+      : 'заправка до MTOW ' + fmt(r.to.L, 1) + ' л (' + fmt(r.to.L * CFG.fuel.rho, 1) + ' кг); в модели ' + fmt(CFG.model.to.L, 1) + ' л' +
+        (cm === 'warn' ? ' — на ' + fmt(CFG.model.to.L - r.to.L, 1) + ' л меньше, полёт короче' : '')]
   ];
   $('checks').innerHTML = checks.map(c => '<li>' + pill(c[0]) + '<span class="t">' + esc(c[1]) + '</span><span class="d">' + esc(c[2]) + '</span></li>').join('');
   const all = worst(checks.map(c => c[0]).concat(notes.filter(n => n[0] !== 'info').map(n => n[0])));
@@ -778,8 +782,8 @@ function renderBallast(r, inp) {
       fmt(b.to.L, 1) + ' л, X ' + fmt(b.to.s.x, 1) + ', запас ' + fmt(CORE.sm(CFG, b.to.s.x), 1) + ' % САХ.');
     if (less) lines.push('Снимать не обязательно: лишние ' + fmt(-b.dm, 3) + ' кг держат ЦТ без топлива на ' + fmt(inp.target - r.zf.x, 1) + ' мм впереди цели.');
     if (more && f[0] !== 'ok') {
-      lines.push(b.full.map(q => 'С полным пакетом ' + q.h + ' мм (' + fmt(q.m, 2) + ' кг ' + inp.alloy + ') ЦТ без топлива X ' + fmt(q.x, 1) +
-        (q.x > inp.target ? ', на ' + fmt(q.x - inp.target, 1) + ' мм за целью' : ' — цель достигается')).join('; ') + '.');
+      lines.push('Полный пакет ' + inp.alloy + ': ' + b.full.map(q => q.h + ' мм (' + fmt(q.m, 2) + ' кг) — ЦТ без топлива X ' + fmt(q.x, 1) +
+        (q.x > inp.target ? ', на ' + fmt(q.x - inp.target, 1) + ' мм за целью' : ', цель достигается')).join('; ') + '.');
       lines.push((f[0] === 'bad' ? 'Нужны другие меры: ' : 'Другие варианты: ') + 'более плотный сплав (таблица ниже), перенос аккумуляторов вперёд или вторая станция балласта у FR1.');
     }
   }

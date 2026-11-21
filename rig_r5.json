@@ -1,0 +1,1393 @@
+{
+ "title": "DW-R5 — стенд взвешивания на трёх узлах катапульты: ЦТ по X, Y и (с наклоном) Z",
+ "generated": "2026-11-21",
+ "source": "cad/rig5.py (python rig5.py --verify)",
+ "frame": "мм, система самолёта: X назад от вершины крыла, Y вправо, Z вверх; при горизонтальном взвешивании оси земли = оси самолёта. glTF (x, y, z) = (X, Z, −Y)/1000",
+ "floor_z": -700.0,
+ "frame_top_z": -595.0,
+ "rig_mass_kg": 87.3,
+ "load_cell": {
+  "maker": "VPG (Vishay Precision Group) — Tedea-Huntleigh",
+  "model": "1042",
+  "type": "одноточечный (платформенный) тензодатчик изгиба",
+  "capacity_kg": 100.0,
+  "accuracy_class": "OIML R60 C3",
+  "n_max": 3000,
+  "Y_Emax_over_vmin": 6000,
+  "v_min_g": 16.7,
+  "total_error_pct_RO": 0.02,
+  "zero_return_30min_pct_of_load": 0.017,
+  "temp_zero_pct_RO_per_C": 0.0023,
+  "temp_span_pct_load_per_C": 0.001,
+  "eccentric_pct_RC_per_cm": 0.0049,
+  "safe_overload_pct": 150,
+  "ultimate_overload_pct": 300,
+  "rated_output": "2,0 ± 0,2 мВ/В",
+  "excitation": "10 В (макс. 15 В)",
+  "bridge": "415 Ом вход / 350 Ом выход, 6 проводов",
+  "platform_max_mm": "400 × 400",
+  "body": "анодированный алюминий, IP65 (таблица характеристик; в перечне особенностей — IP66)",
+  "size_mm": [
+   150.0,
+   40.0,
+   25.4
+  ],
+  "mounting": "4 × M6 (по 2 на конец), 10 Н·м",
+  "datasheet": "VPG Tedea-Huntleigh Model 1042, Document No. 12010",
+  "count": 3,
+  "indicator": "3 независимых канала, 24 бит, отсчёт 5 г, усреднение 10 с",
+  "max_expected_load_kg": 67.0,
+  "utilisation_pct": 67.0
+ },
+ "supports": {
+  "front": {
+   "what": "Ti-палец Ø10 приёмника HK на площадке PTFE (бочка R30 поперёк), стойка на роликовой каретке по X",
+   "pin_axis": [
+    626.0,
+    0.0,
+    -174.0
+   ],
+   "contact_level": [
+    626.0,
+    0.0,
+    -179.0
+   ],
+   "reaction": "вертикаль через ось пальца",
+   "constrains": "Z",
+   "post_section_in_pocket_mm": [
+    11.0,
+    15.0
+   ],
+   "icd_envelope_mm": [
+    18,
+    20
+   ]
+  },
+  "rear_right": {
+   "what": "сфера SR10 в коническом гнезде LB (Ø22 → Ø16 на 10 мм)",
+   "sphere_centre": [
+    1190.0,
+    80.0,
+    -173.78
+   ],
+   "contact_circle": {
+    "z": -170.9,
+    "diameter": 19.16,
+    "on_cone_deg": 308.2,
+    "outboard_mouth_edge_z": -170.42
+   },
+   "reaction": "через центр сферы (нормали контакта сходятся в нём)",
+   "constrains": "X Y Z"
+  },
+  "rear_left": {
+   "what": "то же, палец на поперечной каретке ±3 мм",
+   "sphere_centre": [
+    1190.0,
+    -80.0,
+    -173.78
+   ],
+   "contact_circle": {
+    "z": -170.9,
+    "diameter": 19.16,
+    "on_cone_deg": 308.2,
+    "outboard_mouth_edge_z": -170.42
+   },
+   "reaction": "через центр сферы",
+   "constrains": "X Z"
+  },
+  "sphere": {
+   "radius": 10.0,
+   "flat_above_centre": 5.5,
+   "flat_to_socket_floor_level": 2.63,
+   "why": "конический палец каретки (Ø21 → Ø15 на 10 мм, та же конусность, зазор 0,5 мм) лёг бы торцом на дно Ø16 и заклинился бы фланками при повороте на 10°; сфера садится на конус и поворачивается в нём"
+  },
+  "socket": {
+   "mouth_z": -175.64,
+   "mouth_d": 22.0,
+   "floor_z": -165.64,
+   "floor_d": 16.0,
+   "cone_half_deg": 16.7
+  }
+ },
+ "states": {
+  "level": {
+   "pitch_deg": 0.0,
+   "spacer_mm": 0.0,
+   "reaction_points": {
+    "front": [
+     626.0,
+     0.0,
+     -179.0
+    ],
+    "rear_right": [
+     1190.0,
+     80.0,
+     -173.78
+    ],
+    "rear_left": [
+     1190.0,
+     -80.0,
+     -173.78
+    ]
+   },
+   "reaction_x_ground": {
+    "front": 626.0,
+    "rear": 1190.0
+   }
+  },
+  "tilted": {
+   "spacer_mm": 100.0,
+   "pitch_deg": 10.2125,
+   "pivot": "ось через центры сфер, параллельная Y",
+   "pivot_points": [
+    [
+     1190.0,
+     80.0,
+     -173.78
+    ],
+    [
+     1190.0,
+     -80.0,
+     -173.78
+    ]
+   ],
+   "front_module_shift_ground": [
+    6.98,
+    0.0,
+    100.0
+   ],
+   "front_pin_axis_ground": [
+    634.9,
+    0.0,
+    -74.0
+   ],
+   "front_contact_ground": [
+    634.9,
+    0.0,
+    -79.0
+   ],
+   "front_contact_aircraft": [
+    626.89,
+    0.0,
+    -178.92
+   ],
+   "reaction_x_ground": {
+    "front": 634.896,
+    "rear": 1190.0
+   },
+   "wing_tip_stand_drop_mm": 134.3,
+   "wing_tip_stands": "площадки опустить на 134 мм до установки проставки"
+  },
+  "wing_tip_pads": {
+   "xy": [
+    1890.0,
+    1317.5
+   ],
+   "level_pad_top_z": -179.1,
+   "gap_mm": 10.0,
+   "tilted_drop_mm": 134.3
+  }
+ },
+ "formulas": {
+  "W": "W = F + R + L (кг)",
+  "X": "X = 626 + 564·(R + L)/W  (горизонт)",
+  "Y": "Y = 80·(R − L)/W  (горизонт)",
+  "Xg": "Xg = x_f' + (1190 − x_f')·(R' + L')/W,  x_f' = 634.896  (наклон, оси земли)",
+  "Z": "Z = -173.78 + (Xg − 1190 − (X − 1190)·cos θ)/sin θ,  θ = 10.2125°"
+ },
+ "cases": {
+  "zero_fuel": {
+   "name": "Без топлива: 30 кг полезной нагрузки и 2,75 кг балласта (взвешивание ЦТ по Z — в этом состоянии)",
+   "mass_kg": 108.384,
+   "cg_model": [
+    924.78,
+    -3.1,
+    -37.91
+   ],
+   "cg_tilted_attitude_aircraft_frame": [
+    924.78,
+    -3.1,
+    -37.91
+   ],
+   "readings_kg": {
+    "level": {
+     "F": 50.968,
+     "R": 26.607,
+     "L": 30.809
+    },
+    "tilted": {
+     "F": 46.261,
+     "R": 28.961,
+     "L": 33.163
+    }
+   },
+   "cg_from_readings": {
+    "X": 924.78,
+    "Y": -3.1,
+    "Z": -37.91
+   },
+   "note": "Z из двух взвешиваний совпадает с моделью: груз жёсткий, жидкости нет."
+  },
+  "empty": {
+   "name": "Пустой (OEW, без нагрузки и топлива) — на стенде не взвешивается",
+   "mass_kg": 78.384,
+   "cg_model": [
+    1207.14,
+    -4.29,
+    -40.89
+   ],
+   "cg_tilted_attitude_aircraft_frame": [
+    1207.14,
+    -4.29,
+    -40.89
+   ],
+   "readings_kg": {
+    "level": {
+     "F": -2.382,
+     "R": 38.282,
+     "L": 42.484
+    },
+    "tilted": {
+     "F": -5.709,
+     "R": 39.945,
+     "L": 44.147
+    }
+   },
+   "cg_from_readings": {
+    "X": 1207.14,
+    "Y": -4.29,
+    "Z": -40.89
+   },
+   "note": "ЦТ пустого самолёта X 1207.1 — на 17 мм позади задних опор: передняя опора получила бы отрицательную нагрузку, самолёт опрокинулся бы на хвост вокруг сфер (на катапульте его держит замок HK). Взвешивать с установленным грузом PL_BLOCK (без топлива) или с контрольной гирей известной массы на носу и вычитать её.",
+   "tips_over": true
+  },
+  "take_off": {
+   "name": "Взлётная масса 140 кг: 42.72 л топлива",
+   "mass_kg": 140.0,
+   "cg_model": [
+    920.09,
+    -2.4,
+    -41.58
+   ],
+   "cg_tilted_attitude_aircraft_frame": [
+    923.56,
+    -2.4,
+    -41.28
+   ],
+   "readings_kg": {
+    "level": {
+     "F": 66.999,
+     "R": 34.399,
+     "L": 38.602
+    },
+    "tilted": {
+     "F": 60.209,
+     "R": 37.794,
+     "L": 41.998
+    }
+   },
+   "cg_from_readings": {
+    "X": 920.09,
+    "Y": -2.4,
+    "Z": -22.02
+   },
+   "note": "Топливо в мягком баке при наклоне 10.2° перетекает назад: центр топлива (904.0; -0.0; -54.2) → (919.4; -0.0; -52.8) в осях самолёта, поэтому Z из двух взвешиваний с топливом ошибочен — высоту ЦТ меряют без топлива, топливо добавляют расчётом по таблице.",
+   "fuel": {
+    "litres": 42.72,
+    "kg": 31.616,
+    "centroid_level": [
+     904.02,
+     -0.0,
+     -54.17
+    ],
+    "centroid_tilted": [
+     919.38,
+     -0.0,
+     -52.84
+    ]
+   },
+   "apparent_Z_bias_mm": 19.6
+  }
+ },
+ "resolution": {
+  "reading_step_g": 5,
+  "per_5g_step_mm": {
+   "X": 0.026,
+   "Y": 0.0037,
+   "Z": 0.147
+  },
+  "note": "шаг отсчёта 5 г на одном канале при W ≈ 108 кг"
+ },
+ "accuracy": {
+  "two_sigma_xyz": [
+   0.358,
+   0.267,
+   1.982
+  ],
+  "two_sigma_xyz_mean_of_3_sets": [
+   0.306,
+   0.268,
+   1.189
+  ],
+  "by_source": {
+   "cell_random": [
+    0.089,
+    0.021,
+    0.69
+   ],
+   "cell_gain_pct": [
+    0.052,
+    0.009,
+    0.005
+   ],
+   "hard_point_x": [
+    0.235,
+    0.0,
+    0.12
+   ],
+   "sockets_y": [
+    0.0,
+    0.19,
+    0.0
+   ],
+   "front_y": [
+    0.0,
+    0.186,
+    0.0
+   ],
+   "pivot_z": [
+    0.0,
+    0.0,
+    0.281
+   ],
+   "level_attitude_deg": [
+    0.141,
+    0.0,
+    0.025
+   ],
+   "spacer_mm": [
+    0.0,
+    0.0,
+    0.085
+   ],
+   "seat_friction_kg": [
+    0.205,
+    0.0,
+    1.622
+   ],
+   "front_slide_kg": [
+    0.0,
+    0.0,
+    0.873
+   ]
+  },
+  "sigma_inputs": {
+   "cell_random": 0.01,
+   "cell_gain_pct": 0.015,
+   "hard_point_x": 0.25,
+   "sockets_y": 0.25,
+   "front_y": 0.2,
+   "pivot_z": 0.25,
+   "level_attitude_deg": 0.03,
+   "spacer_mm": 0.03,
+   "seat_friction_kg": 0.02,
+   "front_slide_kg": 0.015
+  },
+  "per_weighing_sources": [
+   "cell_random",
+   "seat_friction_kg",
+   "front_slide_kg"
+  ],
+  "note": "2σ, Монте-Карло, случай без топлива (1σ входов: отсчёт датчика 10 г, ошибка коэффициента 0,015 % показания, X пальца HK относительно гнёзд LB 0,25 мм, Y гнёзд 0,25 мм, Y точки касания спереди 0,2 мм, высота центра сферы 0,25 мм, горизонт 0,03°, проставка 0,03 мм, остаточный перенос нагрузки трением в гнёздах после обстукивания 20 г на каждое взвешивание, роликовая каретка × плечо 95 мм при наклоне 15 г). Без обстукивания трение в конусе (клин 1/sin 16,7° = 3,5) может держать до ≈ 0,2 кг переноса — до ±6 мм по Z. Точность по X в долях САХ: ±0,3 мм / 1485 мм ≈ 0,02 % САХ."
+ },
+ "procedure": [
+  "Слить топливо (до невырабатываемого остатка), элевоны в нейтраль и зафиксировать, винт поставить горизонтально (PLK), парашют и подушки уложены, люки закрыты, полезная нагрузка и балласт — как в взвешиваемой конфигурации.",
+  "Выставить раму по уровню винтовыми опорами (0,5 мм/м по фланцам колонн), прогреть индикатор 15 мин, обнулить три канала с установленными толкателями.",
+  "Поднять самолёт стропой за рымы LG-F и LG-A (рассчитаны на 19 кН), опустить гнёзда LB на сферы, затем окно HK — на передний толкатель. Страховочные стойки выставить на 10 мм под лыжи законцовок (Z -179.1).",
+  "Обстучать стойки резиновым молотком, 3 отсчёта по 10 с (F, R, L), между отсчётами покачать нос ±2 мм и отпустить.",
+  "Опустить страховочные площадки на 134 мм (при наклоне законцовки опускаются на столько же). Поднять нос на ≈ 110 мм (за обтекатель), снять передний модуль, поставить проставку 100 мм на фланец колонны, модуль — на проставку (штифты), опустить нос: θ = 10.21°. Проверить щупом 10 мм под лыжами. Обстучать, 3 отсчёта.",
+  "Повторить оба положения ещё раз (переустановка), ЦТ — по средним, формулы выше."
+ ],
+ "aircraft_findings": [
+  "LB, гнёзда (1190; ±80): коническая выборка в systems5 (mk_lb) начинается на 1 мм ниже устья по оси (Z −176,64), а обвод в этом месте наклонён на 27° (окружность фюзеляжа R175 на |Y| 80). С внутренней стороны каждого устья остаётся титановый порог до 4,3 мм (от обвода Z −180,95 до Z −176,64) внутри окружности Ø22,6: в гнездо не входят ни сферы стенда (врезание 134 мм³ на сферу), ни конические пальцы каретки катапульты. Исправление (только systems5, геометрия гнезда не меняется): начать конус ниже обвода, например cone((1190, ±80, −186), +Z, r 14,11 → 8,0, h 20,36). С исправленным гнездом стенд проходит все проверки.",
+  "LB, наружная сторона устья: из-за того же наклона конус гнезда с наружной стороны кончается на обводе уже на Z -170.42, на 0,5 мм выше окружности касания сферы, — сфера лежит на конусе по 308° окружности и на кромке устья на остальных 52°; посадка остаётся через центр сферы. Кромку устья стоит скруглить R0,5.",
+  "Пустой самолёт (OEW 78.4 кг, X 1207.1) имеет ЦТ на 17 мм позади гнёзд LB: на трёх узлах катапульты без груза он опрокидывается на хвост (на каретке его держит замок HK). Взвешивать с грузом PL_BLOCK; при снятом грузе на каретке/стенде — не отпускать нос.",
+  "Топливо в мягком баке при наклоне на 10.2° смещается (см. cases.take_off): высота ЦТ по двум взвешиваниям верна только без топлива — Z с топливом получают расчётом."
+ ],
+ "clearances": {
+  "threshold_mm": 3.0,
+  "as_modelled": {
+   "level": {
+    "RIG_FRAME": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_FEET": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_COL_F": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_COL_R": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_COL_L": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_LC_F": {
+     "min_mm": 59.06,
+     "nearest": "HT_DOORS_ABF",
+     "at": [
+      558.5,
+      5.09,
+      -254.0
+     ],
+     "at_aircraft": [
+      558.5,
+      3.8,
+      -194.96
+     ],
+     "ok": true
+    },
+    "RIG_LC_R": {
+     "min_mm": 68.13,
+     "nearest": "CB_SHL_L",
+     "at": [
+      1141.55,
+      65.94,
+      -254.02
+     ],
+     "at_aircraft": [
+      1141.55,
+      47.46,
+      -188.44
+     ],
+     "ok": true
+    },
+    "RIG_LC_L": {
+     "min_mm": 68.13,
+     "nearest": "CB_SHL_L",
+     "at": [
+      1141.55,
+      -65.94,
+      -254.02
+     ],
+     "at_aircraft": [
+      1141.55,
+      -47.46,
+      -188.44
+     ],
+     "ok": true
+    },
+    "RIG_HEAD_F": {
+     "min_mm": 3.5,
+     "nearest": "HK: Ti-блок (стенки кармана)",
+     "at": [
+      620.5,
+      -7.5,
+      -179.95
+     ],
+     "at_aircraft": [
+      620.5,
+      -11.0,
+      -179.95
+     ],
+     "ok": true,
+     "contact": {
+      "counterpart": "HK: палец Ø10",
+      "distance_mm": 0.0,
+      "overlap_mm3": 0.0,
+      "point": [
+       626.0,
+       -0.0,
+       -179.0
+      ]
+     }
+    },
+    "RIG_PIN_R": {
+     "min_mm": 3.46,
+     "nearest": "LB: башмак с гнёздами",
+     "at": [
+      1190.0,
+      75.0,
+      -181.94
+     ],
+     "at_aircraft": [
+      1190.0,
+      73.54,
+      -178.8
+     ],
+     "ok": false,
+     "contact": {
+      "counterpart": "LB: башмак с гнёздами",
+      "distance_mm": 0.0,
+      "overlap_mm3": 134.0,
+      "point": [
+       1199.58,
+       80.0,
+       -170.9
+      ]
+     }
+    },
+    "RIG_PIN_L": {
+     "min_mm": 3.46,
+     "nearest": "LB: башмак с гнёздами",
+     "at": [
+      1190.0,
+      -75.0,
+      -181.94
+     ],
+     "at_aircraft": [
+      1190.0,
+      -73.54,
+      -178.8
+     ],
+     "ok": false,
+     "contact": {
+      "counterpart": "LB: башмак с гнёздами",
+      "distance_mm": 0.0,
+      "overlap_mm3": 134.0,
+      "point": [
+       1199.58,
+       -80.0,
+       -170.9
+      ]
+     }
+    },
+    "RIG_SPACER": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_WTS_R": {
+     "min_mm": 10.0,
+     "nearest": "SKID_R",
+     "at": [
+      1915.45,
+      1305.0,
+      -179.1
+     ],
+     "at_aircraft": [
+      1915.45,
+      1305.0,
+      -169.1
+     ],
+     "ok": true
+    },
+    "RIG_WTS_L": {
+     "min_mm": 10.0,
+     "nearest": "SKID_L",
+     "at": [
+      1915.45,
+      -1305.0,
+      -179.1
+     ],
+     "at_aircraft": [
+      1915.45,
+      -1305.0,
+      -169.1
+     ],
+     "ok": true
+    },
+    "RIG_IND": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    }
+   },
+   "tilted": {
+    "RIG_FRAME": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_FEET": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_COL_F": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_COL_R": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_COL_L": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_LC_F": {
+     "min_mm": 48.26,
+     "nearest": "CB_SHL_L",
+     "at": [
+      726.73,
+      -0.0,
+      -243.26
+     ],
+     "at_aircraft": [
+      726.73,
+      -0.0,
+      -195.0
+     ],
+     "ok": true
+    },
+    "RIG_LC_R": {
+     "min_mm": 52.69,
+     "nearest": "HT_DOORS_ABA",
+     "at": [
+      1292.65,
+      46.2,
+      -242.95
+     ],
+     "at_aircraft": [
+      1292.65,
+      35.51,
+      -191.36
+     ],
+     "ok": true
+    },
+    "RIG_LC_L": {
+     "min_mm": 52.69,
+     "nearest": "HT_DOORS_ABA",
+     "at": [
+      1292.65,
+      -46.2,
+      -242.95
+     ],
+     "at_aircraft": [
+      1292.65,
+      -35.51,
+      -191.36
+     ],
+     "ok": true
+    },
+    "RIG_HEAD_F": {
+     "min_mm": 3.47,
+     "nearest": "HK: Ti-блок (стенки кармана)",
+     "at": [
+      632.58,
+      -0.0,
+      -190.32
+     ],
+     "at_aircraft": [
+      636.0,
+      -0.0,
+      -189.7
+     ],
+     "ok": true,
+     "contact": {
+      "counterpart": "HK: палец Ø10",
+      "distance_mm": 0.0,
+      "overlap_mm3": 0.0,
+      "point": [
+       626.89,
+       -0.0,
+       -178.92
+      ]
+     }
+    },
+    "RIG_PIN_R": {
+     "min_mm": 3.2,
+     "nearest": "LB: башмак с гнёздами",
+     "at": [
+      1193.2,
+      75.33,
+      -181.49
+     ],
+     "at_aircraft": [
+      1193.2,
+      73.97,
+      -178.6
+     ],
+     "ok": false,
+     "contact": {
+      "counterpart": "LB: башмак с гнёздами",
+      "distance_mm": 0.0,
+      "overlap_mm3": 134.0,
+      "point": [
+       1199.58,
+       80.0,
+       -170.9
+      ]
+     }
+    },
+    "RIG_PIN_L": {
+     "min_mm": 3.2,
+     "nearest": "LB: башмак с гнёздами",
+     "at": [
+      1193.2,
+      -75.33,
+      -181.49
+     ],
+     "at_aircraft": [
+      1193.2,
+      -73.97,
+      -178.6
+     ],
+     "ok": false,
+     "contact": {
+      "counterpart": "LB: башмак с гнёздами",
+      "distance_mm": 0.0,
+      "overlap_mm3": 134.0,
+      "point": [
+       1199.58,
+       -80.0,
+       -170.9
+      ]
+     }
+    },
+    "RIG_SPACER": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_WTS_R": {
+     "min_mm": 10.02,
+     "nearest": "SKID_R",
+     "at": [
+      1951.78,
+      1305.0,
+      -178.41
+     ],
+     "at_aircraft": [
+      1950.0,
+      1305.0,
+      -168.55
+     ],
+     "ok": true
+    },
+    "RIG_WTS_L": {
+     "min_mm": 10.02,
+     "nearest": "SKID_L",
+     "at": [
+      1951.78,
+      -1305.0,
+      -178.41
+     ],
+     "at_aircraft": [
+      1950.0,
+      -1305.0,
+      -168.55
+     ],
+     "ok": true
+    },
+    "RIG_IND": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    }
+   }
+  },
+  "lb_socket_through_oml": {
+   "level": {
+    "RIG_FRAME": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_FEET": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_COL_F": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_COL_R": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_COL_L": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_LC_F": {
+     "min_mm": 59.06,
+     "nearest": "HT_DOORS_ABF",
+     "at": [
+      558.5,
+      5.09,
+      -254.0
+     ],
+     "at_aircraft": [
+      558.5,
+      3.8,
+      -194.96
+     ],
+     "ok": true
+    },
+    "RIG_LC_R": {
+     "min_mm": 68.13,
+     "nearest": "CB_SHL_L",
+     "at": [
+      1141.55,
+      65.94,
+      -254.02
+     ],
+     "at_aircraft": [
+      1141.55,
+      47.46,
+      -188.44
+     ],
+     "ok": true
+    },
+    "RIG_LC_L": {
+     "min_mm": 68.13,
+     "nearest": "CB_SHL_L",
+     "at": [
+      1141.55,
+      -65.94,
+      -254.02
+     ],
+     "at_aircraft": [
+      1141.55,
+      -47.46,
+      -188.44
+     ],
+     "ok": true
+    },
+    "RIG_HEAD_F": {
+     "min_mm": 3.5,
+     "nearest": "HK: Ti-блок (стенки кармана)",
+     "at": [
+      620.5,
+      -7.5,
+      -179.95
+     ],
+     "at_aircraft": [
+      620.5,
+      -11.0,
+      -179.95
+     ],
+     "ok": true,
+     "contact": {
+      "counterpart": "HK: палец Ø10",
+      "distance_mm": 0.0,
+      "overlap_mm3": 0.0,
+      "point": [
+       626.0,
+       -0.0,
+       -179.0
+      ]
+     }
+    },
+    "RIG_PIN_R": {
+     "min_mm": 4.74,
+     "nearest": "LB: внутренний уголок",
+     "at": [
+      1190.0,
+      70.16,
+      -171.97
+     ],
+     "at_aircraft": [
+      1190.0,
+      65.5,
+      -171.12
+     ],
+     "ok": true,
+     "contact": {
+      "counterpart": "LB: башмак с гнёздами",
+      "distance_mm": 0.0,
+      "overlap_mm3": 0.0,
+      "point": [
+       1199.58,
+       80.0,
+       -170.9
+      ]
+     }
+    },
+    "RIG_PIN_L": {
+     "min_mm": 4.74,
+     "nearest": "LB: внутренний уголок",
+     "at": [
+      1190.0,
+      -70.16,
+      -171.97
+     ],
+     "at_aircraft": [
+      1190.0,
+      -65.5,
+      -171.12
+     ],
+     "ok": true,
+     "contact": {
+      "counterpart": "LB: башмак с гнёздами",
+      "distance_mm": 0.0,
+      "overlap_mm3": 0.0,
+      "point": [
+       1199.58,
+       -80.0,
+       -170.9
+      ]
+     }
+    },
+    "RIG_SPACER": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_WTS_R": {
+     "min_mm": 10.0,
+     "nearest": "SKID_R",
+     "at": [
+      1915.45,
+      1305.0,
+      -179.1
+     ],
+     "at_aircraft": [
+      1915.45,
+      1305.0,
+      -169.1
+     ],
+     "ok": true
+    },
+    "RIG_WTS_L": {
+     "min_mm": 10.0,
+     "nearest": "SKID_L",
+     "at": [
+      1915.45,
+      -1305.0,
+      -179.1
+     ],
+     "at_aircraft": [
+      1915.45,
+      -1305.0,
+      -169.1
+     ],
+     "ok": true
+    },
+    "RIG_IND": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    }
+   },
+   "tilted": {
+    "RIG_FRAME": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_FEET": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_COL_F": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_COL_R": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_COL_L": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_LC_F": {
+     "min_mm": 48.26,
+     "nearest": "CB_SHL_L",
+     "at": [
+      726.73,
+      -0.0,
+      -243.26
+     ],
+     "at_aircraft": [
+      726.73,
+      -0.0,
+      -195.0
+     ],
+     "ok": true
+    },
+    "RIG_LC_R": {
+     "min_mm": 52.69,
+     "nearest": "HT_DOORS_ABA",
+     "at": [
+      1292.65,
+      46.2,
+      -242.95
+     ],
+     "at_aircraft": [
+      1292.65,
+      35.51,
+      -191.36
+     ],
+     "ok": true
+    },
+    "RIG_LC_L": {
+     "min_mm": 52.69,
+     "nearest": "HT_DOORS_ABA",
+     "at": [
+      1292.65,
+      -46.2,
+      -242.95
+     ],
+     "at_aircraft": [
+      1292.65,
+      -35.51,
+      -191.36
+     ],
+     "ok": true
+    },
+    "RIG_HEAD_F": {
+     "min_mm": 3.47,
+     "nearest": "HK: Ti-блок (стенки кармана)",
+     "at": [
+      632.58,
+      -0.0,
+      -190.32
+     ],
+     "at_aircraft": [
+      636.0,
+      -0.0,
+      -189.7
+     ],
+     "ok": true,
+     "contact": {
+      "counterpart": "HK: палец Ø10",
+      "distance_mm": 0.0,
+      "overlap_mm3": 0.0,
+      "point": [
+       626.89,
+       -0.0,
+       -178.92
+      ]
+     }
+    },
+    "RIG_PIN_R": {
+     "min_mm": 4.74,
+     "nearest": "LB: внутренний уголок",
+     "at": [
+      1190.0,
+      70.16,
+      -171.97
+     ],
+     "at_aircraft": [
+      1190.0,
+      65.5,
+      -171.12
+     ],
+     "ok": true,
+     "contact": {
+      "counterpart": "LB: башмак с гнёздами",
+      "distance_mm": 0.0,
+      "overlap_mm3": 0.0,
+      "point": [
+       1199.58,
+       80.0,
+       -170.9
+      ]
+     }
+    },
+    "RIG_PIN_L": {
+     "min_mm": 4.74,
+     "nearest": "LB: внутренний уголок",
+     "at": [
+      1190.0,
+      -70.16,
+      -171.97
+     ],
+     "at_aircraft": [
+      1190.0,
+      -65.5,
+      -171.12
+     ],
+     "ok": true,
+     "contact": {
+      "counterpart": "LB: башмак с гнёздами",
+      "distance_mm": 0.0,
+      "overlap_mm3": 0.0,
+      "point": [
+       1199.58,
+       -80.0,
+       -170.9
+      ]
+     }
+    },
+    "RIG_SPACER": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    },
+    "RIG_WTS_R": {
+     "min_mm": 10.02,
+     "nearest": "SKID_R",
+     "at": [
+      1951.78,
+      1305.0,
+      -178.41
+     ],
+     "at_aircraft": [
+      1950.0,
+      1305.0,
+      -168.55
+     ],
+     "ok": true
+    },
+    "RIG_WTS_L": {
+     "min_mm": 10.02,
+     "nearest": "SKID_L",
+     "at": [
+      1951.78,
+      -1305.0,
+      -178.41
+     ],
+     "at_aircraft": [
+      1950.0,
+      -1305.0,
+      -168.55
+     ],
+     "ok": true
+    },
+    "RIG_IND": {
+     "min_mm": null,
+     "nearest": null,
+     "at": null,
+     "at_aircraft": null,
+     "note": "дальше 60 мм от любой детали самолёта",
+     "ok": true
+    }
+   }
+  },
+  "sphere_seat": {
+   "as_modelled": {
+    "level": {
+     "R": {
+      "seat_cone": 0.0,
+      "floor": 2.63,
+      "lip": 0.0,
+      "mouth_edge_outer_surface": 0.0,
+      "other": 4.0,
+      "overlap_mm3": 134.0
+     },
+     "L": {
+      "seat_cone": 0.0,
+      "floor": 2.63,
+      "lip": 0.0,
+      "mouth_edge_outer_surface": 0.0,
+      "other": 4.0,
+      "overlap_mm3": 134.0
+     }
+    },
+    "tilted": {
+     "R": {
+      "seat_cone": 0.0,
+      "floor": 1.24,
+      "lip": 0.0,
+      "mouth_edge_outer_surface": 0.0,
+      "other": 4.0,
+      "overlap_mm3": 134.0
+     },
+     "L": {
+      "seat_cone": 0.0,
+      "floor": 1.24,
+      "lip": 0.0,
+      "mouth_edge_outer_surface": 0.0,
+      "other": 4.0,
+      "overlap_mm3": 134.0
+     }
+    }
+   },
+   "lb_socket_through_oml": {
+    "level": {
+     "R": {
+      "seat_cone": 0.0,
+      "floor": 2.63,
+      "lip": null,
+      "mouth_edge_outer_surface": 0.0,
+      "other": 4.0,
+      "overlap_mm3": 0.0
+     },
+     "L": {
+      "seat_cone": 0.0,
+      "floor": 2.63,
+      "lip": null,
+      "mouth_edge_outer_surface": 0.0,
+      "other": 4.0,
+      "overlap_mm3": 0.0
+     }
+    },
+    "tilted": {
+     "R": {
+      "seat_cone": 0.0,
+      "floor": 1.24,
+      "lip": null,
+      "mouth_edge_outer_surface": 0.0,
+      "other": 4.0,
+      "overlap_mm3": 0.0
+     },
+     "L": {
+      "seat_cone": 0.0,
+      "floor": 1.24,
+      "lip": null,
+      "mouth_edge_outer_surface": 0.0,
+      "other": 4.0,
+      "overlap_mm3": 0.0
+     }
+    }
+   },
+   "note": "мм от сферы до граней башмака: seat_cone — конус гнезда (касание по проекту, 0); floor — дно Ø16; lip — плоскость, закрывающая выборку systems5 на 1 мм ниже устья по оси (порог с внутренней стороны устья; 0 и overlap > 0 — сфера в него врезается); mouth_edge_outer_surface — обвод башмака, граница которого — кромка устья: снаружи обвод наклонён на 27°, конус там кончается на 0,5 мм выше окружности касания, и на дуге 52° сфера лежит на кромке (0 — по проекту); other — бобышка и отверстия; overlap_mm3 — общий объём сферы и башмака (0 — нет врезания)"
+  },
+  "lowest_points": {
+   "level": {
+    "lowest": {
+     "z": -399.0,
+     "part": "PROP",
+     "above_floor": 301.0
+    },
+    "lowest_without_prop": {
+     "z": -196.9,
+     "part": "ENG_EXHAUST",
+     "above_floor": 503.1
+    },
+    "over_frame": {
+     "z": -195.8,
+     "part": "FS_DRAIN",
+     "above_frame_top": 399.2
+    }
+   },
+   "tilted": {
+    "lowest": {
+     "z": -576.4,
+     "part": "PROP",
+     "above_floor": 123.6
+    },
+    "lowest_without_prop": {
+     "z": -340.6,
+     "part": "ENG_EXHAUST",
+     "above_floor": 359.4
+    },
+    "over_frame": {
+     "z": -300.3,
+     "part": "CB_SHL_L",
+     "above_frame_top": 294.7
+    }
+   }
+  },
+  "wing_tip_pads": {
+   "level": [
+    {
+     "min_mm": 10.0,
+     "nearest": "SKID_R"
+    },
+    {
+     "min_mm": 10.0,
+     "nearest": "SKID_L"
+    }
+   ],
+   "tilted": [
+    {
+     "min_mm": 10.02,
+     "nearest": "SKID_R"
+    },
+    {
+     "min_mm": 10.02,
+     "nearest": "SKID_L"
+    }
+   ]
+  }
+ }
+}
