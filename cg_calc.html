@@ -96,6 +96,7 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 [hidden]{display:none!important}
 @media (max-width:520px){
   .wrap{padding:12px 12px 32px}
+  .fields{grid-template-columns:1fr 1fr;gap:10px}
   .card{padding:12px}
   .rd th:first-child,.rd td:first-child{width:58px}
   .tile .v{font-size:20px}
@@ -609,10 +610,12 @@ function restore() {
     const o = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (o) Object.keys(o).forEach(id => { const el = $(id); if (el && typeof o[id] === 'string') el.value = o[id]; });
   } catch (e) { /* ignore */ }
-  if (!$('f-date').value) {
-    const d = new Date(), p = n => String(n).padStart(2, '0');
-    $('f-date').value = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
-  }
+  restoreDate();
+}
+function restoreDate() {
+  if ($('f-date').value) return;
+  const d = new Date(), p = n => (n < 10 ? '0' : '') + n;
+  $('f-date').value = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 }
 
 function renderReadings(r, inp) {
@@ -708,12 +711,14 @@ function renderResults(r, inp) {
   const v = $('verdict');
   v.className = 'banner ' + (all === 'na' ? 'ok' : all);
   v.innerHTML = all === 'bad' ? '<b>Есть выход за допуск или ошибка ввода</b> — см. проверки и предупреждения.'
-    : all === 'warn' ? '<b>Центровка в допуске, но есть замечания</b> — см. ниже.' : '<b>Центровка в допуске.</b> Все проверки пройдены.';
-  // плитки: как стоит на стенде
-  const jw = r.j.w;
+    : all === 'warn' ? '<b>Центровка в допуске, но есть замечания</b> — см. ниже.'
+    : '<b>Центровка в допуске.</b> ' + (cz === 'na' ? 'Высота ЦТ не измерена — для неё нужны показания с наклоном.' : 'Все проверки пройдены.');
+  // плитки: как стоит на стенде (без груза это не полётная конфигурация — без оценки)
+  const flight = inp.payload, NA = {x: 'na', sm: 'na', y: 'na', z: 'na'};
+  const jw = flight ? r.j.w : NA;
   const tile = (lvl, k, val, unit, s) => '<div class="tile ' + lvl + '"><div class="k">' + k + '</div><div class="v">' + val + (unit ? ' <small>' + unit + '</small>' : '') + '</div><div class="s">' + s + '</div></div>';
   $('tiles').innerHTML = [
-    tile('na', 'Масса на стенде', fmt(w.m, 2), 'кг', 'среднее по ' + r.lv.n + ' уст.'),
+    tile('na', 'Масса на стенде', fmt(w.m, 2), 'кг', flight ? 'среднее по ' + r.lv.n + ' уст.' : 'без груза — без оценки'),
     tile(jw.x, 'ЦТ X', fmt(w.x, 1), 'мм', fmt(CORE.mac(CFG, w.x), 1) + ' % САХ'),
     tile(jw.sm, 'Запас устойчивости', fmt(CORE.sm(CFG, w.x), 1), '%', 'не меньше ' + L.smMin + ' %'),
     tile(jw.y, 'ЦТ Y', fmt(w.y, 1), 'мм', 'вправо +, влево ' + MINUS),
@@ -721,14 +726,14 @@ function renderResults(r, inp) {
     tile(cm, 'Взлётная заправка', fmt(r.to.L, 1), 'л', 'до ' + CFG.mtow + ' кг · X ' + fmt(to.x, 1))
   ].join('');
   // состояния (строки — величины, столбцы — состояния)
-  const cols = [['Как взвешен', w, inp.fuel, r.j.w], ['Без топлива, с грузом', zf, 0, r.j.zf], ['Взлёт, MTOW ' + CFG.mtow, to, r.to.L, r.j.to]];
+  const cols = [['Как взвешен' + (flight ? '' : ' (без груза)'), w, inp.fuel, jw], ['Без топлива, с грузом', zf, 0, r.j.zf], ['Взлёт, MTOW ' + CFG.mtow, to, r.to.L, r.j.to]];
   const row = (lab, f) => '<tr><td>' + lab + '</td>' + cols.map(f).join('') + '</tr>';
   $('t-states').innerHTML = '<thead><tr><th></th>' + cols.map(c => '<th>' + c[0] + '</th>').join('') + '</tr></thead><tbody>' +
     row('Масса, кг', c => '<td>' + fmt(c[1].m, 2) + '</td>') +
     row('Топливо, л', c => '<td>' + fmt(c[2], 1) + '</td>') +
     row('X, мм', c => '<td class="' + c[3].x + '">' + fmt(c[1].x, 1) + '</td>') +
     row('Y, мм', c => '<td class="' + c[3].y + '">' + fmt(c[1].y, 1) + '</td>') +
-    row('Z, мм', c => '<td class="' + (c[1].z == null ? '' : inp.fuel > 0 ? 'warn' : c[3].z) + '">' + fmt(c[1].z, 1) + '</td>') +
+    row('Z, мм', c => '<td class="' + (c[1].z == null || c[3].z === 'na' ? '' : inp.fuel > 0 ? 'warn' : c[3].z) + '">' + fmt(c[1].z, 1) + '</td>') +
     row('% САХ', c => '<td>' + fmt(CORE.mac(CFG, c[1].x), 1) + '</td>') +
     row('Запас, % САХ', c => '<td class="' + c[3].sm + '">' + fmt(CORE.sm(CFG, c[1].x), 1) + '</td>') + '</tbody>';
   // сравнение с моделью
@@ -752,28 +757,35 @@ function fitText(h) {
     : ['bad', 'НЕ помещается даже на шпильки rev S4 (' + B.studsS4 + ' мм)'];
 }
 
+let BAL_TEXT = [];
 function renderBallast(r, inp) {
-  const b = r.bal, B = CFG.ballast, T = fmt(inp.target, 1);
-  let h = '<div class="bal-main">';
+  const b = r.bal, B = CFG.ballast, T = fmt(inp.target, 1), lines = [];
+  let lvl, tag;
   if (!isFinite(b.m1)) {
-    h += '<div class="big">' + pill('bad') + ' Цель X ' + T + ' балластом на FR0 не достигается.</div>';
+    lvl = 'bad'; tag = 'недостижимо';
+    lines.push('Цель X ' + T + ' балластом на FR0 не достигается.');
   } else if (b.m1 === 0) {
-    h += '<div class="big">' + pill('ok') + ' Балласт не нужен: без пакета ЦТ без топлива X ' + fmt(b.base.x, 1) + ' — уже впереди цели X ' + T + '.</div>' +
-      '<p>Сейчас стоит ' + fmt(b.m0, 2) + ' кг. Его можно снять полностью (ЦТ без топлива уйдёт на X ' + fmt(b.base.x, 1) + ') или оставить для запаса.</p>';
+    lvl = 'ok'; tag = 'не нужен';
+    lines.push('Балласт не нужен: без пакета ЦТ без топлива X ' + fmt(b.base.x, 1) + ' — уже впереди цели X ' + T + '.');
+    lines.push('Сейчас стоит ' + fmt(b.m0, 2) + ' кг. Его можно снять полностью (ЦТ без топлива уйдёт на X ' + fmt(b.base.x, 1) + ') или оставить как запас.');
   } else {
     const f = fitText(b.h1), more = b.dm > 0.0005, less = b.dm < -0.0005;
-    h += '<div class="big">' + pill(more ? f[0] : 'ok', more ? (f[0] === 'ok' ? 'добавить' : PILL[f[0]]) : (less ? 'запас' : 'норма')) + ' ' +
-      (more ? 'Добавить ' + fmt(b.dm, 3) + ' кг: балласт ' + fmt(b.m1, 3) + ' кг' : less ? 'Балласт в норме: нужно не меньше ' + fmt(b.m1, 3) + ' кг, стоит ' + fmt(b.m0, 3) + ' кг' : 'Балласт ровно на цели: ' + fmt(b.m1, 3) + ' кг') + '</div>' +
-      '<p>Пакет ' + inp.alloy + ': ' + fmt(b.h1, 1) + ' мм (сейчас ' + fmt(b.h0, 1) + ' мм) — ' + f[1] + '. С ним ЦТ без топлива ровно на X ' + T + ', взлёт: заправка ' + fmt(b.to.L, 1) +
-      ' л, X ' + fmt(b.to.s.x, 1) + ', запас ' + fmt(CORE.sm(CFG, b.to.s.x), 1) + ' % САХ.</p>';
-    if (less) h += '<p class="muted small">Снимать не обязательно: лишние ' + fmt(-b.dm, 3) + ' кг сдвигают ЦТ без топлива вперёд на ' + fmt(inp.target - r.zf.x, 1) + ' мм от цели.</p>';
+    lvl = more ? (f[0] === 'bad' ? 'bad' : 'warn') : 'ok';
+    tag = more ? (f[0] === 'ok' ? 'добавить' : f[0] === 'warn' ? 'шпильки S4' : 'не помещается') : less ? 'запас' : 'норма';
+    lines.push(more ? 'Добавить ' + fmt(b.dm, 3) + ' кг: балласт ' + fmt(b.m1, 3) + ' кг.'
+      : less ? 'Балласт в норме: нужно не меньше ' + fmt(b.m1, 3) + ' кг, стоит ' + fmt(b.m0, 3) + ' кг.' : 'Балласт ровно на цели: ' + fmt(b.m1, 3) + ' кг.');
+    lines.push('Пакет ' + inp.alloy + ' ' + fmt(b.h1, 1) + ' мм (сейчас ' + fmt(b.h0, 1) + ' мм) — ' + f[1] + '. С ним ЦТ без топлива ровно на X ' + T + ', взлёт: заправка ' +
+      fmt(b.to.L, 1) + ' л, X ' + fmt(b.to.s.x, 1) + ', запас ' + fmt(CORE.sm(CFG, b.to.s.x), 1) + ' % САХ.');
+    if (less) lines.push('Снимать не обязательно: лишние ' + fmt(-b.dm, 3) + ' кг держат ЦТ без топлива на ' + fmt(inp.target - r.zf.x, 1) + ' мм впереди цели.');
     if (more && f[0] !== 'ok') {
-      h += '<p>' + b.full.map(q => 'с полным пакетом ' + q.h + ' мм (' + fmt(q.m, 2) + ' кг ' + inp.alloy + ') ЦТ без топлива X ' + fmt(q.x, 1) +
-        (q.x > inp.target ? ', на ' + fmt(q.x - inp.target, 1) + ' мм за целью' : ' — цель достигается')).join('; ') + '.</p>';
-      h += '<p>' + (f[0] === 'bad' ? 'Нужны другие меры: ' : 'Другие варианты: ') + 'более плотный сплав (таблица ниже), перенос аккумуляторов вперёд или вторая станция балласта у FR1.</p>';
+      lines.push(b.full.map(q => 'С полным пакетом ' + q.h + ' мм (' + fmt(q.m, 2) + ' кг ' + inp.alloy + ') ЦТ без топлива X ' + fmt(q.x, 1) +
+        (q.x > inp.target ? ', на ' + fmt(q.x - inp.target, 1) + ' мм за целью' : ' — цель достигается')).join('; ') + '.');
+      lines.push((f[0] === 'bad' ? 'Нужны другие меры: ' : 'Другие варианты: ') + 'более плотный сплав (таблица ниже), перенос аккумуляторов вперёд или вторая станция балласта у FR1.');
     }
   }
-  h += '</div>';
+  BAL_TEXT = lines;
+  let h = '<div class="bal-main"><div class="big">' + pill(lvl, tag) + ' ' + esc(lines[0]) + '</div>' +
+    lines.slice(1).map((t, i) => '<p' + (i === 1 && /^Снимать/.test(t) ? ' class="muted small"' : '') + '>' + esc(t) + '</p>').join('') + '</div>';
   h += '<div class="tblwrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>Сплав</th><th>ρ, т/м³</th><th>Нужно, кг</th><th>Пакет, мм</th><th>Шпильки ' + B.studs + ' мм</th><th>rev S4, ' + B.studsS4 + ' мм</th></tr></thead><tbody>' +
     b.alloys.map(a => {
       const ok1 = a.h <= B.studs, ok2 = a.h <= B.studsS4;
@@ -860,7 +872,7 @@ function renderRecord(r, inp) {
       '</td><td>' + fmt(CORE.sm(CFG, M.x), 1) + '</td></tr></tbody></table>' +
       '<p>Выработка топлива от взлёта до нуля: X ' + fmt(r.burn.lo, 1) + '…' + fmt(r.burn.hi, 1) + ' мм. Допуск X ' + CFG.lim.xMin + '…' + CFG.lim.xMax + ', запас не меньше ' + CFG.lim.smMin + ' % САХ, |Z| до ' + CFG.lim.zAbs + ' мм.</p>' +
       '<h4>Проверки</h4><ul>' + Array.prototype.map.call($('checks').children, li => '<li>' + esc(li.querySelector('.pill').textContent) + ' — ' + esc(li.querySelector('.t').textContent) + ': ' + esc(li.querySelector('.d').textContent) + '</li>').join('') + '</ul>' +
-      '<h4>Балласт</h4><p>' + esc($('ballast').querySelector('.bal-main').innerText.replace(/\s*\n\s*/g, ' ')) + '</p>';
+      '<h4>Балласт</h4><p>' + BAL_TEXT.map(esc).join(' ') + '</p>';
     const ns = notesOf(r, inp);
     if (ns.length) h += '<h4>Предупреждения</h4><ul>' + ns.map(n => '<li>' + esc(n[1]) + '</li>').join('') + '</ul>';
   } else h += '<p>Расчёта нет: не введены показания в горизонтальном положении.</p>';
@@ -909,7 +921,10 @@ async function loadRig() {
     $('g-spacer').placeholder = fmt(RIG.spacer, 1);
   } catch (e) {
     RIGSRC.state = 'builtin';
-    RIGSRC.why = location.protocol === 'file:' ? 'страница открыта как файл, браузер не даёт читать соседние файлы' : (e && e.message ? e.message : 'нет файла');
+    const msg = e && e.message ? e.message : '';
+    RIGSRC.why = !/^https?:$/.test(location.protocol) ? 'страница открыта как файл, а не с сайта — браузер не даёт читать соседние файлы'
+      : /^HTTP 404/.test(msg) ? 'файла нет рядом со страницей' : /^HTTP/.test(msg) ? 'сервер ответил ' + msg
+      : e instanceof SyntaxError ? 'файл не в формате JSON' : 'не удалось загрузить';
   }
   update();
 }
@@ -921,11 +936,12 @@ function init() {
   document.addEventListener('change', e => { if (e.target.matches('select,input[type=date]')) update(); });
   $('btn-selftest').addEventListener('click', selfTest);
   $('btn-clear').addEventListener('click', () => {
-    if (!confirm('Очистить все показания весов?')) return;
+    if (!confirm('Очистить все показания весов? Дата станет сегодняшней.')) return;
     ['lv', 'tl'].forEach(a => { for (let i = 0; i < 3; i++) for (let k = 0; k < 3; k++) $(cid(a, i, k)).value = ''; });
-    selfSnap = null; update();
+    $('f-date').value = '';
+    selfSnap = null; restoreDate(); update();
   });
-  $('btn-print').addEventListener('click', () => { update(); window.print(); });
+  ['btn-print', 'btn-print2'].forEach(id => $(id).addEventListener('click', () => { update(); window.print(); }));
   window.addEventListener('beforeprint', update);
   $('foot').innerHTML = esc(CFG.version) + '. Модель: build/mass_balance_r5.json — без топлива ' + fmt(CFG.model.zf.m, 2) + ' кг, X ' + fmt(CFG.model.zf.x, 2) + ', Y ' + fmt(CFG.model.zf.y, 2) +
     ', Z ' + fmt(CFG.model.zf.z, 2) + '; пустой с балластом ' + fmt(CFG.model.oew.m, 2) + ' кг, X ' + fmt(CFG.model.oew.x, 1) + '. Введённое хранится только в этом браузере.';

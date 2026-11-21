@@ -6,7 +6,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 const $ = id => document.getElementById(id);
-const DEFAULT_MODEL = 'DW-R5-11211353.glb';                  // deploy5.sh / deliver5.sh write the DW-R5 file name here
+const DEFAULT_MODEL = 'DW-R5-11211356.glb';                  // deploy5.sh / deliver5.sh write the DW-R5 file name here
 const MODEL = new URLSearchParams(location.search).get('model') || DEFAULT_MODEL;
 // cache-busting for files that keep their name between site updates (second model, rig, assembly data): the page
 // loads app.js?v=<release>, so every asset of one release is fetched fresh once
@@ -746,8 +746,8 @@ let xrMode = 'immersive-ar', xrState = null;
   xrBtn.textContent = ar ? 'В шлеме: на полу в комнате · 1:1' : 'Открыть в VR-шлеме · 1:1';
   if (vrBtn) { vrBtn.hidden = !(ar && vr); }
   const verTxt = ASSET_VER ? ` Версия сайта: ${ASSET_VER.replace(/^DW-R5-|\.glb$/g, '')}.` : '';
-  $('xr-note').textContent = (ar ? 'Шлем найден: самолёт встанет на пол вашей комнаты в масштабе 1:1 (камеры шлема показывают комнату). Рукоять — взять и передвинуть, кнопка на панели — снова поставить на пол перед собой.'
-    : (vr ? 'Шлем найден: модель откроется в VR на виртуальном полу в масштабе 1:1.' : 'Устройство VR не найдено. На обычном экране управление мышью и касанием.')) + verTxt;
+  $('xr-note').textContent = (ar ? 'Режим комнаты (AR): есть. Самолёт встанет на пол вашей комнаты в масштабе 1:1, вокруг будет видна комната. Рукоять — взять и передвинуть, кнопка на панели — снова поставить на пол перед собой.'
+    : (vr ? 'Режим комнаты (AR): этот браузер его не поддерживает — только VR, модель на виртуальном полу. Откройте сайт в Meta Quest Browser последней версии.' : 'Устройство VR не найдено. На обычном экране управление мышью и касанием.')) + verTxt;
 })();
 // put the aircraft on the floor (local-floor space: y = 0 is the floor), broadside to the user, 1.5-3 m in front
 function placeOnFloor() {
@@ -762,30 +762,37 @@ function placeOnFloor() {
   const target = V(eye.x, 0, eye.z).addScaledVector(f, dist);
   root.quaternion.setFromAxisAngle(V(0, 1, 0), yaw);
   const cr = V(c.x, modelBox.min.y, c.z).applyQuaternion(root.quaternion);
-  root.position.set(target.x - cr.x, 0.002 - cr.y, target.z - cr.z);
+  root.position.set(target.x - cr.x, xrFloorY + 0.002 - cr.y, target.z - cr.z);
 }
+let xrFloorY = 0, xrWhy = '';                       // floor height in the reference space; why the room mode was not used
 async function startXR(mode) {
   if (xrSession) { xrSession.end(); return; }
-  const opts = mode === 'immersive-ar' ? {requiredFeatures: ['local-floor'], optionalFeatures: ['bounded-floor', 'hand-tracking']}
-                                       : {optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']};
+  // no required features: a headset without a set-up floor or room still opens the room (AR) mode
+  const opts = {optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']};
   try {
     xrSession = await navigator.xr.requestSession(mode, opts);
   } catch (err) {
     xrSession = null;
+    if (mode === 'immersive-ar') xrWhy = String(err.message || err);
     $('xr-note').textContent = `Шлем не открыл режим ${mode === 'immersive-ar' ? 'комнаты (AR)' : 'VR'}: ${err.message || err}.` +
       (mode === 'immersive-ar' ? ' Открываю VR с моделью на полу.' : '');
     if (mode === 'immersive-ar') return startXR('immersive-vr');
     return;
   }
-  renderer.xr.setReferenceSpaceType('local-floor');
+  // floor-level space if the headset has a floor, else a head-level space with the floor about 1.5 m below
+  let space = 'local-floor'; xrFloorY = 0;
+  try { await xrSession.requestReferenceSpace('local-floor'); } catch { space = 'local'; xrFloorY = -1.5; }
+  renderer.xr.setReferenceSpaceType(space);
   await renderer.xr.setSession(xrSession);
   root.userData.desktop = {p: root.position.clone(), q: root.quaternion.clone()};
   const ar = mode === 'immersive-ar';
   scene.background = ar ? null : new THREE.Color(0x5d6662);                     // passthrough: no virtual background
   renderer.setClearColor(0x000000, ar ? 0 : 1);
   placeOnFloor(); setTimeout(placeOnFloor, 400); setTimeout(placeOnFloor, 1500);   // again once the head pose is known
-  xrState = {mode: ar ? 'комната (AR)' : 'VR', blend: xrSession.environmentBlendMode || '—'};
-  $('xr-note').textContent = `Открыт режим: ${xrState.mode}, смешивание: ${xrState.blend}. Версия сайта: ${ASSET_VER || 'локальная'}.`;
+  const blend = xrSession.environmentBlendMode || '—';
+  xrState = {mode: ar ? (blend === 'opaque' ? 'AR без камер' : 'комната') : (xrWhy ? 'VR: комната недоступна' : 'VR'), blend};
+  $('xr-note').textContent = `Открыт режим: ${ar ? 'комната (AR)' : 'VR'}, смешивание: ${blend}, пол: ${xrFloorY ? 'по оценке (−1,5 м)' : 'шлема'}.` +
+    (xrWhy ? ` Комната не открылась: ${xrWhy}.` : '') + ` Версия сайта: ${ASSET_VER || 'локальная'}.`;
   xrPanel = xrPanel || makePanel(); xrPanel.mesh.visible = true; xrPanel.draw();
   xrBtn.textContent = 'Выйти из шлема'; if (vrBtn) vrBtn.hidden = true;
   xrSession.addEventListener('end', () => {
