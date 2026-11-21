@@ -6,8 +6,12 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 const $ = id => document.getElementById(id);
-const DEFAULT_MODEL = 'DW-R5-11211342.glb';                  // deploy5.sh / deliver5.sh write the DW-R5 file name here
+const DEFAULT_MODEL = 'DW-R5-11211343.glb';                  // deploy5.sh / deliver5.sh write the DW-R5 file name here
 const MODEL = new URLSearchParams(location.search).get('model') || DEFAULT_MODEL;
+// cache-busting for files that keep their name between site updates (second model, rig, assembly data): the page
+// loads app.js?v=<release>, so every asset of one release is fetched fresh once
+const ASSET_VER = new URL(import.meta.url).searchParams.get('v') || '';
+const withVer = url => ASSET_VER ? url + (url.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(ASSET_VER) : url;
 const SYSTEM_ORDER = ['frame', 'controls', 'engine', 'fuel', 'avionics', 'recovery', 'harness', 'payload'];
 const AUTO_FOCUS = new Set(['engine', 'avionics']);
 
@@ -84,7 +88,7 @@ function allMaterials(fn) { model?.traverse(o => { if (o.isMesh) (Array.isArray(
 
 // ------------------------------------------------------------------ loading
 const loader = new GLTFLoader();
-loader.load(MODEL, gltf => {
+loader.load(withVer(MODEL), gltf => {
   model = gltf.scene; root.add(model);
   exterior = model.getObjectByName('EXTERIOR'); interior = model.getObjectByName('INTERIOR');
   const seen = new Set();
@@ -393,7 +397,7 @@ const anim = {on: false, playing: false, stage: 0, speed: 1, clock: 0, last: 0, 
               cur: null, manual: false};
 const partById = new Map();
 const asmReady = () => !!setupAssembly.done;
-if ($('player')) fetch('assembly_r5.json?v=' + encodeURIComponent(MODEL)).then(r => r.ok ? r.json() : null)
+if ($('player')) fetch(withVer('assembly_r5.json')).then(r => r.ok ? r.json() : null)
   .then(d => { asm = d; setupAssembly(); }).catch(() => {});
 
 // mm in CAD axes (X aft, Y right, Z up) for a part centred at c. spread = false gives the pure installation path (the
@@ -686,7 +690,7 @@ function toggleRig(show = null) {
   }
   if (rigLoading || show === false) return;
   rigLoading = true; $('btn-rig') && ($('btn-rig').textContent = 'Стенд: загрузка…');
-  loader.load('DW-R5_rig.glb?v=' + encodeURIComponent(MODEL), g => {
+  loader.load(withVer('DW-R5_rig.glb'), g => {
     rigRoot = g.scene; rigRoot.name = 'RIG'; root.add(rigRoot);
     rigRoot.traverse(o => {
       if (o.isMesh) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(m => { m.side = THREE.DoubleSide; patch(m); }); }
