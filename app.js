@@ -6,7 +6,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 const $ = id => document.getElementById(id);
-const DEFAULT_MODEL = 'DW-R5-11211443.glb';                  // deploy5.sh / deliver5.sh write the DW-R5 file name here
+const DEFAULT_MODEL = 'DW-R5-11211444.glb';                  // deploy5.sh / deliver5.sh write the DW-R5 file name here
 const MODEL = new URLSearchParams(location.search).get('model') || DEFAULT_MODEL;
 // cache-busting for files that keep their name between site updates (second model, rig, assembly data): the page
 // loads app.js?v=<release>, so every asset of one release is fetched fresh once
