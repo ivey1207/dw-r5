@@ -6,13 +6,14 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 const $ = id => document.getElementById(id);
-const MODEL = new URLSearchParams(location.search).get('model') || 'DW-R5-11210303.glb';
+const DEFAULT_MODEL = 'DW-R5-11211334.glb';                  // deploy5.sh / deliver5.sh write the DW-R5 file name here
+const MODEL = new URLSearchParams(location.search).get('model') || DEFAULT_MODEL;
 const SYSTEM_ORDER = ['frame', 'controls', 'engine', 'fuel', 'avionics', 'recovery', 'harness', 'payload'];
 const AUTO_FOCUS = new Set(['engine', 'avionics']);
 
 // ------------------------------------------------------------------ renderer / scene
 const canvas = $('c');
-const renderer = new THREE.WebGLRenderer({canvas, antialias: true, preserveDrawingBuffer: true});
+const renderer = new THREE.WebGLRenderer({canvas, antialias: true, alpha: true, preserveDrawingBuffer: true});
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.AgXToneMapping;
@@ -36,6 +37,7 @@ controls.enableDamping = true; controls.dampingFactor = 0.09; controls.zoomToCur
 controls.minDistance = 0.05; controls.maxDistance = 14;
 
 const root = new THREE.Group(); scene.add(root);
+let shadowMesh = null, modelBox = null, isR5 = true;      // set when the model loads
 
 // soft contact shadow under the aircraft (CAD Z −205 mm)
 {
@@ -44,7 +46,7 @@ const root = new THREE.Group(); scene.add(root);
   grd.addColorStop(0, 'rgba(30,40,35,0.42)'); grd.addColorStop(1, 'rgba(30,40,35,0)');
   g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.0), new THREE.MeshBasicMaterial({map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false}));
-  m.rotation.x = -Math.PI / 2; m.position.set(0.8, -0.212, 0); m.name = 'contact-shadow'; root.add(m);
+  m.rotation.x = -Math.PI / 2; m.position.set(0.8, -0.212, 0); m.name = 'contact-shadow'; root.add(m); shadowMesh = m;
 }
 
 // ------------------------------------------------------------------ state
@@ -105,7 +107,22 @@ loader.load(MODEL, gltf => {
   });
   // skin material for the ghost outline
   exterior.traverse(o => { if (o.isMesh) { o.userData.solidMat = o.material; o.userData.ghostMat = ghostMaterial(o.material); } });
-  buildUI(); applyView('hero', false); refresh(); setupAssembly();
+  // model box in the root frame (root is still at identity here); the contact shadow lies at the model's lowest point
+  modelBox = new THREE.Box3().setFromObject(model);
+  if (shadowMesh) {
+    const c = modelBox.getCenter(new THREE.Vector3()), sz = modelBox.getSize(new THREE.Vector3());
+    shadowMesh.position.set(c.x, modelBox.min.y - 0.004, c.z); shadowMesh.scale.set(sz.x * 1.25 / 3.6, sz.z * 1.25 / 3.0, 1);
+  }
+  const rootInfo = model.children[0]?.userData || {};
+  isR5 = /DW-R5/.test(rootInfo.title || '') || /DW-R5/.test(MODEL);
+  if (!isR5) {                                     // another aircraft: its own header, no DW-R5-only tools
+    const h = document.querySelector('#panel h1'); if (h) h.textContent = rootInfo.title || MODEL;
+    const sb = document.querySelector('#panel .sub'); if (sb) sb.textContent = rootInfo.subtitle || '';
+    ['btn-explode', 'btn-assembly', 'btn-rig', 'btn-cgcalc'].forEach(id => { const e = $(id); if (e) e.hidden = true; });
+    document.title = (rootInfo.title || MODEL) + ' · Осмотр';
+  }
+  syncModelSwitch();
+  buildUI(); applyView('hero', false); refresh(); if (isR5) setupAssembly();
   $('status').textContent = `${parts.length} деталей · ${countTris()} тыс. треугольников`;
   window.__dw = {ready: true, parts: parts.length};
 }, ev => { if (ev.total) $('status').textContent = `Загрузка ${(ev.loaded / ev.total * 100).toFixed(0)} %`; },
@@ -117,12 +134,27 @@ function ghostMaterial(base) {
 }
 function countTris() { let n = 0; model.traverse(o => { if (o.isMesh) n += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; }); return Math.round(n / 1000); }
 
+// ------------------------------------------------------------------ models on this site
+// DW-R5 is the page default (deploy5.sh writes its versioned file name as MODEL's fallback); other aircraft by ?model=
+const MODELS = [{key: 'r5', file: null, title: 'DW-R5'}, {key: 'assem1', file: 'Assem1.glb', title: 'VTOL (Assem1)'}];
+function syncModelSwitch() {
+  const box = $('model-switch'); if (!box) return;
+  box.innerHTML = '';
+  const cur = MODELS.find(m => m.file && MODEL.endsWith(m.file)) || MODELS[0];
+  MODELS.forEach(m => {
+    const a = document.createElement('a');
+    a.textContent = m.title; a.className = 'mswitch' + (m === cur ? ' on' : '');
+    a.href = m.file ? `?model=${encodeURIComponent(m.file)}` : (/DW-R5/.test(DEFAULT_MODEL) ? location.pathname : '?model=DW-R5.glb');
+    box.append(a);
+  });
+}
+
 // ------------------------------------------------------------------ UI
 const SYSTEM_TITLES = {};
 function buildUI() {
   const sysNode = interior.children.map(c => c.userData).filter(u => u.dw_system);
   sysNode.forEach(u => SYSTEM_TITLES[u.system] = u.title);
-  SYSTEM_TITLES.exterior = 'Обшивка';
+  SYSTEM_TITLES.exterior = 'Обшивка'; SYSTEM_TITLES.rig = 'Стенд взвешивания (наземное оборудование)';
   const chips = $('systems');
   const mk = (key, title) => { const b = document.createElement('button'); b.textContent = title; b.dataset.sys = key; b.onclick = () => chooseSystem(key); chips.append(b); };
   mk('all', 'Все системы'); mk('exterior', 'Обшивка');
@@ -141,6 +173,8 @@ function buildUI() {
   const on = (id, f) => { const e = $(id); if (e) e.onclick = f; };
   on('btn-explode', () => setExploded(!exploded));
   on('btn-assembly', () => startAssembly());
+  on('btn-rig', () => toggleRig());
+  on('btn-cgcalc', () => window.open('cg_calc.html', '_blank', 'noopener'));
   on('pl-play', () => togglePlay());
   on('pl-next', () => stepTo(anim.stage + 1));
   on('pl-prev', () => stepTo(anim.stage - 1));
@@ -246,7 +280,7 @@ function select(p, fromList = false) {
   $('card-finish').textContent = (m.finishes || []).join('; ') || '—';
   if (m.boundsMM) { const [a, b] = m.boundsMM; $('card-size').textContent = `${(b[0]-a[0]).toFixed(0)} × ${(b[1]-a[1]).toFixed(0)} × ${(b[2]-a[2]).toFixed(0)} мм (X × Y × Z)`; }
   $('card-ref').hidden = $('card-ref-dt').hidden = !m.reference; $('card-ref').textContent = m.reference || '';
-  if (p.system !== 'exterior' && state.skin && state.section === 'none') { state.skin = false; refresh(); }
+  if (p.system !== 'exterior' && p.system !== 'rig' && state.skin && state.section === 'none') { state.skin = false; refresh(); }
   const prevSys = select.prevSys; select.prevSys = p.system;
   if (p.system === 'engine' && prevSys !== 'engine') {
     // first pick on the engine: frame the whole T-550E so it fills most of the window
@@ -273,6 +307,7 @@ canvas.addEventListener('pointerup', e => {
 });
 function pick(raycaster) {
   const targets = []; parts.forEach(p => { if (isShown(p.obj)) targets.push(...p.meshes); });
+  rigParts.forEach(p => { if (isShown(p.obj)) targets.push(...p.meshes); });
   const hits = raycaster.intersectObjects(targets, false);
   for (const h of hits) {
     if (state.section !== 'none' && plane.distanceToPoint(h.point) < 0) continue;
@@ -499,6 +534,7 @@ function setExploded(on, animate = true) {
   if (!asmReady()) return;
   if (anim.on) stopAssembly();
   if (on && state.section !== 'none') setSection('none');
+  if (on && rigRoot?.visible) toggleRig(false);          // the exploded kit would pass through the stand
   exploded = on;
   const n = asm.stages.length;
   if (on) xrLift(true);
@@ -532,6 +568,7 @@ function startAssembly() {
   if (anim.on) { stepTo(0, true); return; }
   select(null); restoreView();
   if (state.section !== 'none') setSection('none');
+  if (rigRoot?.visible) toggleRig(false);
   exploded = false; $('btn-explode').textContent = 'Разнести детали'; $('btn-explode').classList.remove('on');
   fx.length = 0;
   Object.assign(anim, {on: true, playing: true, finished: false, clock: 0, events: []});
@@ -637,6 +674,44 @@ function syncPlayer() {
   $('pl-next').disabled = !anim.on || anim.finished || anim.stage >= (asm?.stages.length || 1) - 1;
 }
 
+// ------------------------------------------------------------------ weighing rig (ground equipment, separate GLB)
+// DW-R5_rig.glb (cad/rig5.py): 3 load cells under the catapult hard points (HK pin, LB sockets), same frame as the
+// aircraft. Loaded on demand; its parts can be picked for their cards but are not part of the aircraft lists.
+const rigParts = [];
+let rigRoot = null, rigLoading = false;
+function toggleRig(show = null) {
+  if (rigRoot) {
+    rigRoot.visible = show === null ? !rigRoot.visible : show;
+    syncRig(); if (rigRoot.visible) frameRig(); xrPanel?.draw(); return;
+  }
+  if (rigLoading || show === false) return;
+  rigLoading = true; $('btn-rig') && ($('btn-rig').textContent = 'Стенд: загрузка…');
+  loader.load('DW-R5_rig.glb?v=' + encodeURIComponent(MODEL), g => {
+    rigRoot = g.scene; rigRoot.name = 'RIG'; root.add(rigRoot);
+    rigRoot.traverse(o => {
+      if (o.isMesh) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(m => { m.side = THREE.DoubleSide; patch(m); }); }
+      if (!o.userData?.dw_part) return;
+      const meshes = []; o.traverse(m => m.isMesh && meshes.push(m));
+      const rec = {obj: o, meta: o.userData, meshes, system: 'rig'};
+      meshes.forEach(m => partByMesh.set(m, rec)); rigParts.push(rec);
+    });
+    rigLoading = false; syncRig(); frameRig(); refresh(); xrPanel?.draw();
+  }, undefined, () => { rigLoading = false; $('btn-rig') && ($('btn-rig').textContent = 'Стенд: нет файла'); });
+}
+function syncRig() {
+  const b = $('btn-rig'); if (!b) return;
+  const on = !!(rigRoot && rigRoot.visible);
+  b.textContent = on ? 'Убрать стенд' : 'Стенд взвешивания'; b.classList.toggle('on', on);
+}
+function frameRig() {
+  if (renderer.xr.isPresenting || !rigRoot) return;
+  const b = new THREE.Box3().setFromObject(rigRoot); if (b.isEmpty()) return;
+  b.union(new THREE.Box3().setFromObject(model));
+  const sph = b.getBoundingSphere(new THREE.Sphere()), d = V(-0.55, 0.22, 0.80).normalize();
+  const vfov = THREE.MathUtils.degToRad(camera.fov), hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
+  flyTo(sph.center.clone().add(d.multiplyScalar(sph.radius / Math.tan(Math.min(vfov, hfov) / 2) / 1.2)), sph.center.clone(), null, 900);
+}
+
 // ------------------------------------------------------------------ resize / loop
 function resize() {
   if (renderer.xr.isPresenting) return;
@@ -657,29 +732,56 @@ renderer.setAnimationLoop(now => {
 
 // ------------------------------------------------------------------ WebXR
 let xrPanel = null, xrSession = null, grabbing = null;
-const xrBtn = $('btn-xr');
+const xrBtn = $('btn-xr'), vrBtn = $('btn-vr');
+let xrMode = 'immersive-ar';
 (async () => {
-  if (!navigator.xr) { $('xr-note').textContent = 'WebXR недоступен в этом браузере. Откройте страницу в браузере шлема (Meta Quest Browser и аналоги).'; return; }
-  const ok = await navigator.xr.isSessionSupported('immersive-vr').catch(() => false);
-  xrBtn.disabled = !ok;
-  $('xr-note').textContent = ok ? 'Шлем найден: модель откроется в масштабе 1:1.' : 'Устройство VR не найдено. На обычном экране управление мышью и касанием.';
+  if (!navigator.xr) { $('xr-note').textContent = 'WebXR недоступен в этом браузере. Откройте страницу в браузере шлема (Meta Quest Browser и аналоги).'; if (vrBtn) vrBtn.hidden = true; return; }
+  const ar = await navigator.xr.isSessionSupported('immersive-ar').catch(() => false);
+  const vr = await navigator.xr.isSessionSupported('immersive-vr').catch(() => false);
+  xrBtn.disabled = !ar && !vr; xrMode = ar ? 'immersive-ar' : 'immersive-vr';
+  xrBtn.textContent = ar ? 'В шлеме: на полу в комнате · 1:1' : 'Открыть в VR-шлеме · 1:1';
+  if (vrBtn) { vrBtn.hidden = !(ar && vr); }
+  $('xr-note').textContent = ar ? 'Шлем найден: самолёт встанет на пол вашей комнаты в масштабе 1:1 (камеры шлема показывают комнату). Рукоять — взять и передвинуть, кнопка на панели — снова поставить на пол перед собой.'
+    : (vr ? 'Шлем найден: модель откроется в VR на виртуальном полу в масштабе 1:1.' : 'Устройство VR не найдено. На обычном экране управление мышью и касанием.');
 })();
-xrBtn.onclick = async () => {
+// put the aircraft on the floor (local-floor space: y = 0 is the floor), broadside to the user, 1.5-3 m in front
+function placeOnFloor() {
+  if (!modelBox) return;
+  const cam = renderer.xr.getCamera();
+  const eye = new THREE.Vector3(), q = new THREE.Quaternion();
+  if (renderer.xr.isPresenting) { eye.setFromMatrixPosition(cam.matrixWorld); q.setFromRotationMatrix(cam.matrixWorld); }
+  const f = V(0, 0, -1).applyQuaternion(q); f.y = 0; if (f.lengthSq() < 1e-6) f.set(0, 0, -1); f.normalize();
+  const yaw = Math.atan2(-f.x, -f.z);                       // the aircraft's long axis along the user's right hand
+  const size = modelBox.getSize(new THREE.Vector3()), c = modelBox.getCenter(new THREE.Vector3());
+  const dist = Math.max(1.5, Math.min(3.0, 0.55 * Math.hypot(size.x, size.z) + 0.6));
+  const target = V(eye.x, 0, eye.z).addScaledVector(f, dist);
+  root.quaternion.setFromAxisAngle(V(0, 1, 0), yaw);
+  const cr = V(c.x, modelBox.min.y, c.z).applyQuaternion(root.quaternion);
+  root.position.set(target.x - cr.x, 0.002 - cr.y, target.z - cr.z);
+}
+async function startXR(mode) {
   if (xrSession) { xrSession.end(); return; }
-  xrSession = await navigator.xr.requestSession('immersive-vr', {optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']});
+  const opts = mode === 'immersive-ar' ? {requiredFeatures: ['local-floor'], optionalFeatures: ['bounded-floor', 'hand-tracking']}
+                                       : {optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']};
+  xrSession = await navigator.xr.requestSession(mode, opts);
   renderer.xr.setReferenceSpaceType('local-floor');
   await renderer.xr.setSession(xrSession);
   root.userData.desktop = {p: root.position.clone(), q: root.quaternion.clone()};
-  root.position.set(-0.8, 1.0, -2.1); root.quaternion.identity();     // 1:1, broadside, centre 2.1 m ahead
-  scene.background = new THREE.Color(0x5d6662);
+  const ar = mode === 'immersive-ar';
+  scene.background = ar ? null : new THREE.Color(0x5d6662);                     // passthrough: no virtual background
+  renderer.setClearColor(0x000000, ar ? 0 : 1);
+  placeOnFloor(); setTimeout(placeOnFloor, 400);                               // again once the head pose is known
   xrPanel = xrPanel || makePanel(); xrPanel.mesh.visible = true; xrPanel.draw();
-  xrBtn.textContent = 'Выйти из VR';
+  xrBtn.textContent = 'Выйти из шлема'; if (vrBtn) vrBtn.hidden = true;
   xrSession.addEventListener('end', () => {
-    xrSession = null; xrBtn.textContent = 'Открыть в VR-шлеме · 1:1';
+    xrSession = null; xrBtn.textContent = xrMode === 'immersive-ar' ? 'В шлеме: на полу в комнате · 1:1' : 'Открыть в VR-шлеме · 1:1';
+    if (vrBtn && xrMode === 'immersive-ar') vrBtn.hidden = false;
     root.position.copy(root.userData.desktop.p); root.quaternion.copy(root.userData.desktop.q);
-    scene.background = new THREE.Color(0xd9ddd9); xrPanel.mesh.visible = false; resize();
+    scene.background = new THREE.Color(0xd9ddd9); renderer.setClearColor(0x000000, 1); xrPanel.mesh.visible = false; resize();
   });
-};
+}
+xrBtn.onclick = () => startXR(xrMode);
+if (vrBtn) vrBtn.onclick = () => startXR('immersive-vr');
 const controllers = [0, 1].map(i => {
   const c = renderer.xr.getController(i); scene.add(c);
   const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0, 0, 0), V(0, 0, -1)]), new THREE.LineBasicMaterial({color: 0xffa040}));
@@ -723,7 +825,7 @@ function xrTick() {
 
 // in-headset panel (canvas texture)
 function makePanel() {
-  const W = 1024, H = 940, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const W = 1024, H = 1060, cv = document.createElement('canvas'); cv.width = W; cv.height = H;   // 14 buttons, 2 x 7
   const g = cv.getContext('2d'); const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.32 * H / W), new THREE.MeshBasicMaterial({map: tex, toneMapped: false, transparent: true}));
   mesh.position.set(0, 0.06, -0.12); mesh.rotation.x = -0.75;
@@ -736,11 +838,13 @@ function makePanel() {
     {t: () => 'Подвести деталь', f: () => state.selected && bringToHand(state.selected.obj)},
     {t: () => 'Скрыть деталь', f: () => state.selected && hidePart(state.selected)},
     {t: () => 'Показать всё', f: () => { hidden.clear(); refresh(); }},
-    {t: () => 'Вернуть сборку', f: () => { resetAll(); root.position.set(-0.8, 1.0, -2.1); root.quaternion.identity(); }},
+    {t: () => 'Вернуть сборку', f: () => { resetAll(); placeOnFloor(); }},
+    {t: () => 'На пол передо мной', f: () => placeOnFloor()},
     {t: () => exploded ? 'Собрать детали' : 'Разнести детали', f: () => setExploded(!exploded), on: () => exploded, ok: asmReady},
     {t: () => !anim.on ? 'Как собирается ▶' : (anim.finished ? 'Сборка: с начала' : (anim.playing ? 'Сборка: пауза' : 'Сборка: дальше')), f: () => togglePlay(), on: () => anim.on, ok: asmReady},
     {t: () => 'Следующий этап ▶▶', f: () => anim.on ? (!anim.finished && stepTo(anim.stage + 1)) : startAssembly(), ok: asmReady},
     {t: () => 'Закрыть сборку', f: () => stopAssembly(), ok: () => anim.on},
+    {t: () => rigRoot && rigRoot.visible ? 'Убрать стенд' : 'Стенд взвешивания', f: () => toggleRig(), on: () => !!(rigRoot && rigRoot.visible), ok: () => !!$('btn-rig')},
   ];
   const cell = (i) => ({x: 24 + (i % 2) * 496, y: 210 + Math.floor(i / 2) * 120, w: 480, h: 104});
   function wrap(text, x, y, maxW, lh, maxLines) {
@@ -784,5 +888,5 @@ async function snap(name, w = 2400, h = 1500) {
 function setCam(p, t, fov) { tween = null; camera.position.set(...p); controls.target.set(...t); if (fov) camera.fov = fov; camera.updateProjectionMatrix(); controls.update(); }
 function camState() { return [camera.position.toArray(), controls.target.toArray(), camera.fov]; }
 window.__dwApi = {setCam, camState, renderNow, snap, camera, controls, root, THREE, applyView, setSkin, setSection, chooseSystem, select, focusOn, hidePart, resetAll, parts, state, refresh,
-  setExploded, startAssembly, stopAssembly, stepTo, togglePlay, anim, kitBox, frameBox, advance, captionText, renderer,
+  setExploded, startAssembly, stopAssembly, stepTo, togglePlay, anim, kitBox, frameBox, advance, captionText, renderer, toggleRig, rigParts, placeOnFloor, modelBox: () => modelBox,
   byId: id => parts.find(p => p.meta.id === id)};

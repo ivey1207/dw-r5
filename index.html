@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DeltaWing DW-R5 · Осмотр</title>
-<link rel="stylesheet" href="style.css?v=r5-5">
+<link rel="stylesheet" href="style.css?v=r5-7">
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/"}}</script>
 </head>
 <body>
@@ -17,6 +17,8 @@
     <div id="toolbar">
       <button id="btn-explode" disabled title="Разнести все детали по направлениям, откуда их ставят при сборке">Разнести детали</button>
       <button id="btn-assembly" class="accent" disabled title="Анимация сборки по шагам: что куда и как крепится">Как собирается ▶</button>
+      <button id="btn-rig" title="Стенд с тремя весами под узлами катапульты: так измеряют центр тяжести собранного самолёта">Стенд взвешивания</button>
+      <button id="btn-cgcalc" title="Калькулятор центровки и балласта по показаниям трёх весов">Калькулятор ЦТ</button>
       <button id="btn-skin" class="primary">Снять обшивку</button>
       <button id="btn-ghost" disabled>Контур обшивки</button>
       <div class="seg" id="seg-section" role="group" aria-label="Разрез">
@@ -58,6 +60,7 @@
     <header>
       <h1>DeltaWing <span>DW-R5</span></h1>
       <p class="sub">L275 V3 rev F · силовая схема rev S3 · модель 1:1</p>
+      <nav id="model-switch" class="mswitches" aria-label="Модель"></nav>
     </header>
     <div id="systems" class="chips" aria-label="Системы"></div>
     <div id="parts" class="parts" aria-label="Детали"></div>
@@ -81,11 +84,12 @@
       <button id="btn-reset">Вернуть сборку</button>
     </div>
     <button id="btn-xr" class="xr" disabled>Открыть в VR-шлеме · 1:1</button>
+    <button id="btn-vr" hidden>Вместо комнаты — виртуальный фон (VR)</button>
     <p id="xr-note" class="muted">Проверяю поддержку WebXR…</p>
     <p class="muted small">Мышь: вращение — левая кнопка, сдвиг — правая, масштаб — колесо. Касание: один палец — вращение, два — масштаб и сдвиг. Нажатие на деталь выбирает её, двойное нажатие — приближает. «Разнести детали» раскладывает самолёт по направлениям сборки; «Как собирается» показывает сборку по этапам, деталь за деталью: к чему и как она крепится. Пробел — пауза, стрелки — этапы, Esc — выход.</p>
-    <p class="muted small"><a href="DW-R5-11210303.glb" download>Скачать GLB</a> · <a href="DW-R5_assembly.mp4">Видео сборки (MP4)</a></p>
+    <p class="muted small"><a href="DW-R5-11211334.glb" download>Скачать GLB</a> · <a href="DW-R5_assembly.mp4">Видео сборки (MP4)</a></p>
   </aside>
 </div>
-<script type="module" src="app.js?v=DW-R5-11210303.glb"></script>
+<script type="module" src="app.js?v=DW-R5-11211334.glb"></script>
 </body>
 </html>

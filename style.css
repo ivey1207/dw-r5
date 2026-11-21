@@ -58,4 +58,8 @@ button.accent{background:#c4562a;color:#fff;border-color:#c4562a}
   #player .cap-part{min-height:2.9em}
 }
 
+.mswitches{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.mswitch{font-size:12.5px;padding:5px 10px;border:1px solid var(--line);border-radius:14px;color:var(--ink);text-decoration:none;background:var(--card)}
+.mswitch.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
 [hidden]{display:none!important}
