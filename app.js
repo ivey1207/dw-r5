@@ -6,7 +6,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 const $ = id => document.getElementById(id);
-const DEFAULT_MODEL = 'DW-R5-11211334.glb';                  // deploy5.sh / deliver5.sh write the DW-R5 file name here
+const DEFAULT_MODEL = 'DW-R5-11211342.glb';                  // deploy5.sh / deliver5.sh write the DW-R5 file name here
 const MODEL = new URLSearchParams(location.search).get('model') || DEFAULT_MODEL;
 const SYSTEM_ORDER = ['frame', 'controls', 'engine', 'fuel', 'avionics', 'recovery', 'harness', 'payload'];
 const AUTO_FOCUS = new Set(['engine', 'avionics']);
