@@ -1,0 +1,938 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>DW-R5 · Взвешивание и центровка</title>
+<style>
+:root{
+  --bg:#e7eae6;--surface:#f6f7f4;--card:#ffffff;--ink:#1d2622;--muted:#5c6862;--line:#c9d0cb;--soft:#eef1ec;
+  --accent:#24533f;--accent-ink:#ffffff;--hi:#c4562a;--input:#ffffff;--focus:#2f7a58;
+  --ok:#1f6b43;--ok-bg:#dcefe3;--warn:#7d5200;--warn-bg:#fbefd2;--bad:#a5261b;--bad-bg:#f8dcd8;--na:#5c6862;--na-bg:#e4e8e3;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#121815;--surface:#19201c;--card:#1f2823;--ink:#e2e8e4;--muted:#9daba3;--line:#36433b;--soft:#26302a;
+    --accent:#5fae86;--accent-ink:#0d1410;--hi:#e3895f;--input:#151b18;--focus:#7cc7a0;
+    --ok:#8adbab;--ok-bg:#1c3a29;--warn:#f2c46b;--warn-bg:#3b3119;--bad:#f39a90;--bad-bg:#46221e;--na:#9daba3;--na-bg:#2a332e;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 16px 40px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px;margin-bottom:14px}
+h1{font-size:20px;margin:0;line-height:1.2}h1 span{color:var(--muted);font-weight:500}
+.sub{margin:3px 0 0;color:var(--muted);font-size:12.5px;max-width:640px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:12px;min-width:0}
+.card>h2{font-size:16px;margin:0 0 10px}
+h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 6px;font-weight:600}
+.muted{color:var(--muted)}.small{font-size:12.5px}
+p{margin:6px 0}
+a{color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:900px){.grid2{grid-template-columns:1fr 1fr}.grid2>.card{margin-bottom:0}.grid2{margin-bottom:12px}}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px 12px}
+.fields label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+.fields .wide{grid-column:1/-1}
+.fields .hint{font-size:11.5px;color:var(--muted);min-height:1.2em}
+input,select{font:inherit;font-size:16px;color:var(--ink);background:var(--input);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;min-width:0}
+input:focus,select:focus{outline:2px solid var(--focus);outline-offset:-1px;border-color:var(--focus)}
+input[aria-invalid="true"]{border-color:var(--bad);background:var(--bad-bg)}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:8px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+table{border-collapse:collapse}
+.rd{width:100%;table-layout:fixed}
+.rd th,.rd td{padding:3px 3px;text-align:right;font-variant-numeric:tabular-nums}
+.rd th{font-size:12px;font-weight:600;vertical-align:bottom;line-height:1.2}
+.rd th small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.rd th:first-child,.rd td:first-child{width:72px;text-align:left;color:var(--muted);font-size:12px;font-weight:400}
+.rd input{text-align:right;padding:6px 7px}
+.rd tr.sumrow td{border-top:1px solid var(--line);padding-top:6px}
+.rd tr.avg td{font-weight:600}
+.rd tr.model td{color:var(--muted);font-size:12.5px}
+.rd td.hot{color:var(--bad);font-weight:600}
+.att-note{font-size:12.5px;color:var(--muted);margin-top:6px}
+.att-note b{color:var(--ink);font-weight:600}
+.banner{border-radius:8px;padding:10px 12px;margin:0 0 12px;border:1px solid transparent}
+.banner.ok{background:var(--ok-bg);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+.banner.warn{background:var(--warn-bg);color:var(--warn)}
+.banner.bad{background:var(--bad-bg);color:var(--bad)}
+.banner b{font-weight:700}
+.banner .bd{color:var(--ink);font-size:12.5px;margin-top:4px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tile{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--na);border-radius:6px;padding:8px 10px;min-width:0}
+.tile.ok{border-left-color:var(--ok)}.tile.warn{border-left-color:var(--warn)}.tile.bad{border-left-color:var(--bad)}
+.tile .k{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.tile .v{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.25;white-space:nowrap}
+.tile .v small{font-size:13px;font-weight:500;color:var(--muted)}
+.tile .s{font-size:12px;color:var(--muted)}
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tbl{width:100%;min-width:300px;background:var(--card);border:1px solid var(--line);border-radius:6px}
+.tbl th,.tbl td{padding:5px 8px;border-bottom:1px solid var(--soft);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl th{font-size:12px;font-weight:600;background:var(--soft);vertical-align:bottom;white-space:normal}
+.tbl th:first-child,.tbl td:first-child{text-align:left;white-space:normal;color:var(--muted);font-weight:400}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.ok{color:var(--ok);font-weight:600}.tbl td.warn{color:var(--warn);font-weight:600}.tbl td.bad{color:var(--bad);font-weight:700}
+.pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border-radius:10px;padding:1px 8px;white-space:nowrap;vertical-align:1px}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.bad{background:var(--bad-bg);color:var(--bad)}.pill.na,.pill.info{background:var(--na-bg);color:var(--na)}
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.checks li{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:7px 10px;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:baseline}
+.checks li .t{font-weight:600}
+.checks li .d{grid-column:2;color:var(--muted);font-size:12.5px}
+.bal-main{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.bal-main .big{font-size:16px;font-weight:650}
+details{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0 14px;margin-bottom:12px}
+details>summary{cursor:pointer;font-weight:650;font-size:15px;padding:12px 0;list-style-position:inside}
+details[open]>summary{border-bottom:1px solid var(--line);margin-bottom:10px}
+details>div{padding-bottom:14px}
+ol.proc{margin:0;padding-left:20px;display:grid;gap:6px}
+.formula{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px 10px;overflow-x:auto;white-space:pre}
+footer{color:var(--muted);font-size:12px;margin-top:18px}
+#record{display:none}
+[hidden]{display:none!important}
+@media (max-width:520px){
+  .wrap{padding:12px 12px 32px}
+  .card{padding:12px}
+  .rd th:first-child,.rd td:first-child{width:58px}
+  .tile .v{font-size:20px}
+  .tiles{grid-template-columns:1fr 1fr}
+}
+/* ------------------------------------------------------------------ print: only the weighing record */
+@page{size:A4;margin:12mm}
+@media print{
+  :root{--ink:#000;--muted:#444;--line:#999;--soft:#ddd;--card:#fff;--surface:#fff;--bg:#fff;--ok:#000;--warn:#000;--bad:#000;--na:#000;--ok-bg:#fff;--warn-bg:#fff;--bad-bg:#fff;--na-bg:#fff}
+  body{background:#fff;color:#000;font-size:10pt}
+  .screen{display:none!important}
+  #record{display:block!important}
+  #record h1{font-size:15pt;margin:0 0 2pt}
+  #record h4{font-size:10.5pt;margin:9pt 0 3pt;text-transform:uppercase;letter-spacing:.04em}
+  #record table{width:100%;border-collapse:collapse;margin:0 0 3pt;page-break-inside:avoid}
+  #record th,#record td{border:0.5pt solid #777;padding:2pt 4pt;text-align:right;font-variant-numeric:tabular-nums;font-size:9.5pt}
+  #record th{background:#eee;font-weight:600}
+  #record th:first-child,#record td:first-child{text-align:left}
+  #record .kv td{text-align:left}
+  #record .kv td:first-child{width:34%;color:#333}
+  #record ul{margin:2pt 0;padding-left:14pt}
+  #record li{margin:1pt 0}
+  #record .sign{display:flex;gap:24pt;margin-top:18pt}
+  #record .sign div{flex:1;border-top:0.5pt solid #000;padding-top:2pt;font-size:9pt}
+  #record .foot{margin-top:10pt;font-size:8.5pt;color:#444}
+  #record .two{display:flex;gap:10pt}#record .two>div{flex:1}
+}
+</style>
+</head>
+<body>
+<noscript><p style="padding:16px">Для расчёта нужен JavaScript.</p></noscript>
+<div class="wrap screen">
+  <header class="top">
+    <div>
+      <h1>DW-R5 <span>· взвешивание и центровка</span></h1>
+      <p class="sub">Самолёт стоит на трёх весах под узлами катапульты: спереди палец HK, сзади два гнезда башмака LB. По показаниям — масса, центр тяжести, запас устойчивости, взлётная заправка и носовой балласт.</p>
+    </div>
+    <div class="actions" style="margin:0">
+      <button id="btn-print" type="button">Печать протокола</button>
+    </div>
+  </header>
+
+  <section class="card" aria-labelledby="h-cfg">
+    <h2 id="h-cfg">Конфигурация при взвешивании</h2>
+    <div class="fields">
+      <label>Дата<input id="f-date" type="date"></label>
+      <label>Оператор<input id="f-operator" type="text" autocomplete="name" placeholder="ФИО"></label>
+      <label>Борт / зав. №<input id="f-tail" type="text" placeholder="DW-R5-01"></label>
+      <label>Топливо на борту, л<input id="f-fuel" type="text" inputmode="decimal" value="0"><span class="hint" id="h-fuel"></span></label>
+      <label>Груз 30 кг<select id="f-payload"><option value="yes">установлен</option><option value="no">не установлен</option></select><span class="hint">в модели — установлен</span></label>
+      <label>Балласт на FR0, кг<input id="f-ballast" type="text" inputmode="decimal" value="2,75"><span class="hint" id="h-ballast"></span></label>
+      <label>Сплав пластин<select id="f-alloy">
+        <option value="90W">90W — 17,0 т/м³</option>
+        <option value="95W" selected>95W — 18,0 т/м³</option>
+        <option value="97W">97W — 18,5 т/м³</option>
+        <option value="W">W (чистый) — 19,25 т/м³</option>
+      </select><span class="hint">по сертификату на пластины</span></label>
+      <label>Цель X без топлива, мм<input id="f-target" type="text" inputmode="decimal" value="925"><span class="hint">правило: не дальше X 925</span></label>
+      <label class="wide">Примечание<input id="f-note" type="text" placeholder="что установлено / снято, особенности"></label>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section class="card" aria-labelledby="h-lv">
+      <h2 id="h-lv">Показания весов — горизонтально</h2>
+      <table class="rd" id="t-lv"></table>
+      <div class="att-note" id="n-lv"></div>
+    </section>
+    <section class="card" aria-labelledby="h-tl">
+      <h2 id="h-tl">С наклоном <span class="muted" style="font-weight:400;font-size:13px">— для высоты ЦТ, необязательно</span></h2>
+      <table class="rd" id="t-tl"></table>
+      <div class="att-note" id="n-tl"></div>
+    </section>
+  </div>
+  <div class="actions" style="margin:-2px 0 12px">
+    <button id="btn-selftest" class="primary" type="button">Самопроверка по модели</button>
+    <button id="btn-clear" type="button">Очистить показания</button>
+    <button id="btn-print2" type="button">Печать протокола</button>
+  </div>
+
+  <section class="card" aria-labelledby="h-res" aria-live="polite">
+    <h2 id="h-res">Результаты</h2>
+    <div id="selftest" class="banner ok" hidden></div>
+    <p id="res-empty" class="muted">Введите показания F, R, L хотя бы для одной установки в горизонтальном положении. Чтобы проверить сам расчёт, нажмите «Самопроверка по модели».</p>
+    <div id="res-body" hidden>
+      <div id="verdict" class="banner"></div>
+      <div class="tiles" id="tiles"></div>
+      <h3>Состояния</h3>
+      <div class="tblwrap"><table class="tbl" id="t-states"></table></div>
+      <h3>Проверки</h3>
+      <ul class="checks" id="checks"></ul>
+      <h3>Сравнение с моделью</h3>
+      <div class="tblwrap"><table class="tbl" id="t-model"></table></div>
+      <p class="small muted" id="model-note"></p>
+      <h3>Носовой балласт</h3>
+      <div id="ballast"></div>
+    </div>
+    <div id="notes-wrap" hidden>
+      <h3>Предупреждения</h3>
+      <ul class="checks" id="notes"></ul>
+    </div>
+  </section>
+
+  <details open>
+    <summary>Порядок взвешивания</summary>
+    <div>
+      <ol class="proc">
+        <li><b>Подготовка.</b> Стенд на ровном полу, без сквозняка, опоры выставлены по уровню. Весы включить за 15 минут до начала. Самолёт в той конфигурации, что вводится выше: топливо, груз, балласт; люки и крышки закрыты, штатное оборудование на месте, лишнего на борту нет. Для наклона бак должен быть пуст.</li>
+        <li><b>Нули.</b> Пустой стенд (на весах только ложементы опор): обнулить все три весов.</li>
+        <li><b>Установка.</b> Опустить самолёт на стенд: палец HK — в ложемент передней опоры F, гнёзда башмака LB — на задние опоры R (правая по полёту) и L (левая). Самолёт касается только трёх опор: кабели, чехлы, ремни и руки его не держат.</li>
+        <li><b>Отсчёт.</b> Подождать 10–20 с, пока показания успокоятся, записать F, R, L.</li>
+        <li><b>Повтор.</b> Снять самолёт, проверить, что весы вернулись к нулю (если нет — обнулить и повторить установку), поставить снова. Всего 3 установки, калькулятор берёт среднее. Разброс по опоре больше 0,10 кг — найти причину и повторить.</li>
+        <li><b>Наклон (высота ЦТ, Z).</b> Только с пустым баком. Приподнять нос и поднять переднюю опору проставкой <span id="p-spacer">100</span> мм: проставка под весы, а не на платформу (если на платформу — обнулить весы вместе с ней). Опустить нос: самолёт поворачивается на задних гнёздах на <span id="p-angle">10,2</span>° нос вверх, палец HK при этом уходит назад на <span id="p-travel">8,4</span> мм — ложемент должен это позволять, самолёт не должен упираться. Проверить посадку гнёзд и пальца, снять показания так же, 3 раза. Фактическую высоту проставки измерить и, если она не <span id="p-spacer2">100</span> мм, ввести в разделе «Стенд».</li>
+        <li><b>Итог.</b> Проверить результаты и предупреждения, распечатать протокол и подписать. Балласт менять по рекомендации, после замены — контрольное взвешивание.</li>
+      </ol>
+    </div>
+  </details>
+
+  <details id="rig-box">
+    <summary>Стенд, геометрия и формулы</summary>
+    <div>
+      <p id="rig-src" class="small"></p>
+      <div class="tblwrap"><table class="tbl" id="t-rig"></table></div>
+      <div class="fields" style="margin-top:12px">
+        <label>Проставка для наклона, мм<input id="g-spacer" type="text" inputmode="decimal" placeholder="100"><span class="hint">пусто — по стенду</span></label>
+        <label>Тангаж при горизонтальном взвешивании, °<input id="g-pitch0" type="text" placeholder="0"><span class="hint">0, если стенд выставлен по уровню; нос вверх +</span></label>
+        <label>Тангаж при наклоне по инклинометру, °<input id="g-tilt" type="text" placeholder="по геометрии"><span class="hint">пусто — угол считается по проставке</span></label>
+      </div>
+      <p id="rig-angle" class="small" style="margin-top:10px"></p>
+      <p id="rig-sens" class="small muted"></p>
+      <h3>Как считается</h3>
+      <div class="formula">W = F + R + L
+X = (F·x_F + R·x_R + L·x_L) / W              горизонтально: x_F = 626, x_R = x_L = 1190
+Y = (F·y_F + R·y_R + L·y_L) / W = 80·(R − L) / W
+наклон на θ (нос вверх): u_i = x_i·cos θ + z_i·sin θ
+U = Σ F_i·u_i / W = X·cos θ + Z·sin θ   →   Z = (U − X·cos θ) / sin θ
+передняя реакция проходит через ось пальца HK (Z −174), задние — через центры шаровых опор в гнёздах LB
+балласт: пакет от X −657 назад, высота h = m / (ρ·0,00279 м²), центр X −657 + h/2</div>
+      <p class="small muted">Исходные данные (модель, таблица топлива, опоры, допуски) — в одном блоке в начале скрипта этой страницы: «ИСХОДНЫЕ ДАННЫЕ». Если рядом со страницей лежит <code>rig_r5.json</code> (его выпускает конструктор стенда), точки опор и проставка берутся из него.</p>
+    </div>
+  </details>
+
+  <footer id="foot"></footer>
+</div>
+
+<div id="record" aria-hidden="true"></div>
+
+<script>
+'use strict';
+/* ========================================================================================
+   ИСХОДНЫЕ ДАННЫЕ — править здесь.
+   Координаты, мм, оси самолёта: X назад от вершины крыла, Y вправо (по полёту), Z вверх.
+   ======================================================================================== */
+/*CFG-BEGIN*/
+const CFG = {
+  version: 'cg_calc 1.0 · DW-R5 rev S3 · 2026-11-21',
+  rig: {
+    // Передняя опора F: низ пальца HK Ø10 (ось пальца Z −174). Опора касается пальца снизу, реакция проходит через ось.
+    F: {x: 626, y: 0, z: -179, pinR: 5},
+    // Задние опоры: центры шаровых опор в конических гнёздах башмака LB (Ø22 в устье → Ø16 на глубине 10 мм).
+    R: {x: 1190, y: 80, z: -171},
+    L: {x: 1190, y: -80, z: -171},
+    spacer: 100,            // проставка под передней опорой для наклона, мм
+    file: 'rig_r5.json'     // точные значения от конструктора стенда (необязательный файл рядом со страницей)
+  },
+  // Модель: build/mass_balance_r5.json. Без топлива = с грузом 30 кг и носовым балластом 2,75 кг (чистый W, 19,25 т/м³).
+  model: {
+    zf:  {m: 108.3841, x: 924.7775, y: -3.1016, z: -37.9137},
+    oew: {m: 78.3841, x: 1207.1382, y: -4.2887, z: -40.8897},
+    to:  {m: 140.0, L: 42.724, x: 920.0896, y: -2.4021, z: -41.5836},
+    ballast: {m: 2.75, alloy: 'W'}
+  },
+  payload: {m: 30, x: 187.0, y: 0, z: -30.1},                          // PL_BLOCK
+  ballast: {x0: -657, area: 0.00279, y: 0, z: -18.3, studs: 56, studsS4: 75},
+  // пластины Ø70 с окном Ø32 и пазом 10 мм (нетто 0,00279 м²) на двух шпильках M6 от задней грани FR0 (X −657) назад;
+  // шпильки сейчас берут пакет 56 мм, rev S4 предлагает 75 мм
+  alloys: {'90W': 17.0, '95W': 18.0, '97W': 18.5, 'W': 19.25},          // т/м³
+  fuel: {
+    rho: 0.74, tank: 56, cap: 52,                                       // кг/л; объём бака, л; предел заправки, л
+    // центр топлива в горизонте по точной геометрии мягкого бака: [л, X, Y, Z]
+    table: [[2, 897.8, 0, -166.0], [5, 918.3, 0, -151.2], [10, 917.5, 0, -134.7], [15, 911.7, 0, -121.2],
+            [20, 908.8, 0, -108.6], [25, 907.0, 0, -96.4], [30, 905.9, 0, -84.4], [35, 905.0, 0, -72.5],
+            [40, 904.3, 0, -60.6], [42.7, 904.0, 0, -54.2], [45, 903.6, 0, -48.8], [50, 901.2, 0, -36.9],
+            [52, 899.9, 0, -32.0]]
+  },
+  mtow: 140,
+  lim: {
+    xMin: 840, xMax: 940, xDesign: 890,     // допуск ЦТ по X, расчётная центровка
+    np: 1014, mac: 1485.3, xLe: 675,        // фокус, САХ, начало САХ
+    smMin: 5,                               // запас статической устойчивости не меньше, % САХ
+    zAbs: 50,                               // |Z| от плоскости крыла (Z 0) не больше, мм
+    yOk: 5, yMax: 15,                       // |Y|: до 5 мм — норма, до 15 — проверить (критерий мастерской)
+    target: 925                             // правило балласта: ЦТ без топлива не дальше X 925
+  },
+  tol: {spread: 0.10, sum: 0.10, y: 1.0, angle: 0.3}   // кг, кг, мм, градусы
+};
+/*CFG-END*/
+
+/* ---------------------------------------------------------------- расчёт (чистые функции, без DOM) */
+/*CORE-BEGIN*/
+const CORE = (function () {
+  const D = Math.PI / 180;
+  // точки на линиях действия вертикальных реакций (оси самолёта): F — ось пальца, R/L — центры шаров
+  function lines(rig) {
+    return {F: {x: rig.F.x, y: rig.F.y, z: rig.F.z + (rig.F.pinR || 0)},
+            R: {x: rig.R.x, y: rig.R.y, z: rig.R.z}, L: {x: rig.L.x, y: rig.L.y, z: rig.L.z}};
+  }
+  const u = (p, t) => p.x * Math.cos(t) + p.z * Math.sin(t);       // горизонтальная проекция точки при тангаже t
+  const pivot = P => ({x: (P.R.x + P.L.x) / 2, z: (P.R.z + P.L.z) / 2});
+  // тангаж после подъёма передней опоры на h (мм) из положения t0: поворот вокруг задних опор
+  function tiltAngle(rig, t0, h) {
+    const P = lines(rig), c = pivot(P), dx = P.F.x - c.x, dz = P.F.z - c.z;
+    const r = Math.hypot(dx, dz), b = Math.atan2(dz, -dx), s = Math.sin(b + t0) + h / r;
+    return Math.abs(s) < 1 ? Math.asin(s) - b : NaN;
+  }
+  // на сколько палец уходит назад относительно задних опор при наклоне, мм
+  function pinTravel(rig, t0, t1) {
+    const P = lines(rig), c = pivot(P), dx = P.F.x - c.x, dz = P.F.z - c.z;
+    const xw = t => dx * Math.cos(t) + dz * Math.sin(t);
+    return xw(t1) - xw(t0);
+  }
+  function det3(m) {
+    return m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+         + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  }
+  // ожидаемые показания [F, R, L] для твёрдого тела s = {m, x, y, z} при тангаже t
+  function expected(rig, s, t) {
+    const P = lines(rig), A = [[1, 1, 1], [u(P.F, t), u(P.R, t), u(P.L, t)], [P.F.y, P.R.y, P.L.y]];
+    const b = [s.m, s.m * u(s, t), s.m * s.y], d = det3(A);
+    return [0, 1, 2].map(k => det3(A.map((row, i) => row.map((v, j) => (j === k ? b[i] : v)))) / d);
+  }
+  // строки [[F, R, L] | пусто] → среднее по полностью заполненным установкам
+  function average(rows) {
+    const ok = [], partial = [];
+    (rows || []).forEach((r, i) => {
+      const n = r ? r.filter(v => v != null && isFinite(v)).length : 0;
+      if (n === 3) ok.push(r); else if (n > 0) partial.push(i);
+    });
+    if (!ok.length) return {n: 0, partial};
+    const avg = [0, 1, 2].map(k => ok.reduce((a, r) => a + r[k], 0) / ok.length);
+    const spread = [0, 1, 2].map(k => Math.max.apply(null, ok.map(r => r[k])) - Math.min.apply(null, ok.map(r => r[k])));
+    return {n: ok.length, avg, spread, sum: avg[0] + avg[1] + avg[2], partial};
+  }
+  function fuelAt(fuel, L) {                                     // центр топлива в горизонте, линейно по таблице
+    const t = fuel.table, q = Math.min(Math.max(L, t[0][0]), t[t.length - 1][0]);
+    let i = 0;
+    while (i < t.length - 2 && q > t[i + 1][0]) i++;
+    const f = (q - t[i][0]) / (t[i + 1][0] - t[i][0]), g = k => t[i][k] + f * (t[i + 1][k] - t[i][k]);
+    return {x: g(1), y: g(2), z: g(3)};
+  }
+  function fuelState(cfg, L) {
+    if (!(L > 0)) return null;
+    const c = fuelAt(cfg.fuel, L);
+    return {m: L * cfg.fuel.rho, x: c.x, y: c.y, z: c.z};
+  }
+  function comb(a, b, sign) {                                    // сложить (sign = 1) или вычесть (−1) массу
+    if (!b) return {m: a.m, x: a.x, y: a.y, z: a.z};
+    const sg = sign === undefined ? 1 : sign, m = a.m + sg * b.m;
+    const k = c => (a[c] == null || b[c] == null ? null : (a.m * a[c] + sg * b.m * b[c]) / m);
+    return {m, x: k('x'), y: k('y'), z: k('z')};
+  }
+  function stack(cfg, m, alloy) {                                // пакет балласта: h, мм = кг / (т/м³ · м²)
+    const h = m / (cfg.alloys[alloy] * cfg.ballast.area);
+    return {m, x: cfg.ballast.x0 + h / 2, y: cfg.ballast.y, z: cfg.ballast.z, h};
+  }
+  // наименьшая масса пакета, при которой база + пакет стоит на X = target (центр пакета уходит назад с ростом пакета):
+  // k·m² + (x0 − T)·m + M·(Xb − T) = 0, k = 1 / (2ρA)
+  function ballastFor(cfg, base, alloy, target) {
+    if (base.x <= target) return 0;
+    const k = 1 / (2 * cfg.alloys[alloy] * cfg.ballast.area), B = cfg.ballast.x0 - target, C = base.m * (base.x - target);
+    const disc = B * B - 4 * k * C;
+    return disc < 0 || B >= 0 ? NaN : 2 * C / (-B + Math.sqrt(disc));
+  }
+  const mac = (cfg, x) => (x - cfg.lim.xLe) / cfg.lim.mac * 100;
+  const sm = (cfg, x) => (cfg.lim.np - x) / cfg.lim.mac * 100;
+  function takeoff(cfg, zf) {                                    // заправка до MTOW (не больше cap) по таблице
+    const L = Math.min(Math.max((cfg.mtow - zf.m) / cfg.fuel.rho, 0), cfg.fuel.cap);
+    return {L, s: comb(zf, fuelState(cfg, L))};
+  }
+  function burn(cfg, zf, Lmax) {                                 // X при выработке от Lmax до 0 (горизонт)
+    const pts = [0, Lmax].concat(cfg.fuel.table.map(r => r[0]).filter(L => L < Lmax));
+    for (let i = 1; i < 400; i++) pts.push(Lmax * i / 400);
+    let lo = Infinity, hi = -Infinity;
+    pts.forEach(L => { const x = comb(zf, fuelState(cfg, L)).x; if (x < lo) lo = x; if (x > hi) hi = x; });
+    return {lo, hi};
+  }
+  function judge(cfg, s) {
+    const L = cfg.lim, ay = Math.abs(s.y);
+    return {
+      x: s.x >= L.xMin && s.x <= L.xMax ? 'ok' : 'bad',
+      sm: sm(cfg, s.x) >= L.smMin ? 'ok' : 'bad',
+      z: s.z == null ? 'na' : Math.abs(s.z) <= L.zAbs ? 'ok' : 'bad',
+      y: ay <= L.yOk ? 'ok' : ay <= L.yMax ? 'warn' : 'bad'
+    };
+  }
+  // inp: {level, tilt: [[F,R,L]×3], fuel, payload, ballast, alloy, target, pitch0 (°), spacer (мм), tiltDeg (° | null)}
+  function compute(cfg, rig, inp) {
+    const r = {};
+    const t0 = (inp.pitch0 || 0) * D, tGeo = tiltAngle(rig, t0, inp.spacer);
+    const t1 = inp.tiltDeg != null && isFinite(inp.tiltDeg) ? inp.tiltDeg * D : tGeo;
+    r.t0 = t0; r.t1 = t1; r.tGeo = tGeo; r.travel = pinTravel(rig, t0, t1);
+    const P = lines(rig), M = cfg.model;
+    const fuelS = fuelState(cfg, inp.fuel);
+    // модель в конфигурации взвешивания (для ожидаемых показаний)
+    let mc = comb(comb(M.zf, stack(cfg, M.ballast.m, M.ballast.alloy), -1), stack(cfg, inp.ballast, inp.alloy));
+    if (!inp.payload) mc = comb(mc, cfg.payload, -1);
+    mc = comb(mc, fuelS);
+    r.model = mc; r.expLevel = expected(rig, mc, t0); r.expTilt = isFinite(t1) ? expected(rig, mc, t1) : null;
+    const lv = average(inp.level), tl = average(inp.tilt);
+    r.lv = lv; r.tl = tl; r.ok = lv.n > 0 && lv.sum > 0;
+    if (!r.ok) return r;
+    const U = (a, t) => (a.avg[0] * u(P.F, t) + a.avg[1] * u(P.R, t) + a.avg[2] * u(P.L, t)) / a.sum;
+    const Yof = a => (a.avg[0] * P.F.y + a.avg[1] * P.R.y + a.avg[2] * P.L.y) / a.sum;
+    const U0 = U(lv, t0);
+    let X, Z = null;
+    r.zMeasured = tl.n > 0 && tl.sum > 0 && isFinite(t1) && Math.abs(t1 - t0) > 0.5 * D;
+    if (r.zMeasured) {
+      const U1 = U(tl, t1), det = Math.sin(t1 - t0);
+      X = (U0 * Math.sin(t1) - U1 * Math.sin(t0)) / det;
+      Z = (U1 * Math.cos(t0) - U0 * Math.cos(t1)) / det;
+      r.Y1 = Yof(tl); r.W1 = tl.sum;
+    } else {
+      X = (U0 - mc.z * Math.sin(t0)) / Math.cos(t0);            // Z не измерен: при t0 ≠ 0 берётся Z модели
+    }
+    r.w = {m: lv.sum, x: X, y: Yof(lv), z: Z};
+    let zf = comb(r.w, fuelS, -1);
+    if (!inp.payload) zf = comb(zf, cfg.payload);
+    r.zf = zf; r.to = takeoff(cfg, zf); r.burn = burn(cfg, zf, r.to.L);
+    // балласт: снять нынешний пакет, найти пакет для цели
+    const b0 = stack(cfg, inp.ballast, inp.alloy), base = comb(zf, b0, -1);
+    const m1 = ballastFor(cfg, base, inp.alloy, inp.target);
+    const bal = {base, m0: inp.ballast, h0: b0.h, m1, dm: m1 - inp.ballast, target: inp.target};
+    if (isFinite(m1)) {
+      const b1 = stack(cfg, m1, inp.alloy);
+      bal.h1 = b1.h; bal.zf = comb(base, b1); bal.to = takeoff(cfg, bal.zf);
+    }
+    bal.alloys = Object.keys(cfg.alloys).map(a => {
+      const m = ballastFor(cfg, base, a, inp.target);
+      return {alloy: a, rho: cfg.alloys[a], m, h: m / (cfg.alloys[a] * cfg.ballast.area)};
+    });
+    bal.full = [cfg.ballast.studs, cfg.ballast.studsS4].map(h => {
+      const m = h * cfg.alloys[inp.alloy] * cfg.ballast.area, s = comb(base, stack(cfg, m, inp.alloy));
+      return {h, m, x: s.x};
+    });
+    r.bal = bal;
+    r.j = {w: judge(cfg, r.w), zf: judge(cfg, zf), to: judge(cfg, r.to.s)};
+    return r;
+  }
+  return {D, lines, tiltAngle, pinTravel, expected, average, fuelAt, fuelState, comb, stack, ballastFor, mac, sm,
+          takeoff, burn, judge, compute};
+})();
+/*CORE-END*/
+
+/* ---------------------------------------------------------------- rig_r5.json: берём то, что узнаём, и только если оно на узлах самолёта */
+function parseRig(j, def) {
+  const set = {}, used = [], notes = [];
+  const nk = k => String(k).toLowerCase().replace(/[^a-z0-9а-яё]/g, '');
+  const isNum = v => typeof v === 'number' && isFinite(v);
+  const toPt = v => {
+    if (Array.isArray(v) && v.length >= 3 && isNum(v[0]) && isNum(v[1]) && isNum(v[2])) return {x: v[0], y: v[1], z: v[2]};
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      const o = {};
+      Object.keys(v).forEach(k => { o[nk(k)] = v[k]; });
+      if (isNum(o.x) && isNum(o.y) && isNum(o.z)) return {x: o.x, y: o.y, z: o.z};
+    }
+    return null;
+  };
+  const pts = [], nums = [];
+  (function walk(v, path) {
+    if (path.length) { const p = toPt(v); if (p) pts.push({path: path.join('.'), p}); }
+    if (v && typeof v === 'object') Object.keys(v).forEach(k => {
+      const c = v[k], q = path.concat(String(k));
+      if (isNum(c)) nums.push({path: q.join('.'), key: nk(k), v: c}); else walk(c, q);
+    });
+  })(j, []);
+  const good = /axis|ось|centre|center|ball|шар|pivot|центр|reaction|реакц|line/i;
+  const poor = /mouth|устье|cone|конус|apex|floor|пол|base|основ|cell|датчик|scale|весы|top|верх|plate|плит/i;
+  const score = s => (good.test(s) ? 2 : 0) - (poor.test(s) ? 2 : 0);
+  // передняя: палец HK — по оси или по низу (касанию)
+  const zc = def.F.z, za = def.F.z + def.F.pinR;
+  let fb = null;
+  pts.filter(o => o.p.x > 560 && o.p.x < 700 && Math.abs(o.p.y) < 30 && o.p.z > -200 && o.p.z < -150).forEach(o => {
+    const kind = /axis|ось/i.test(o.path) ? 'axis' : Math.abs(o.p.z - zc) <= 2 ? 'contact' : Math.abs(o.p.z - za) <= 2 ? 'axis' : null;
+    if (!kind) return;
+    const s = (kind === 'axis' ? 3 : 1) + score(o.path);
+    if (!fb || s > fb.s) fb = {o, kind, s};
+  });
+  if (fb) {
+    const p = fb.o.p;
+    if (Math.abs(p.x - def.F.x) <= 3 && Math.abs(p.y - def.F.y) <= 3) {
+      set.F = {x: p.x, y: p.y, z: fb.kind === 'axis' ? p.z - def.F.pinR : p.z, pinR: def.F.pinR};
+      used.push('F: ' + fb.o.path + (fb.kind === 'axis' ? ' (ось пальца)' : ' (низ пальца)'));
+    } else notes.push(fb.o.path + ': точка не на пальце HK — не взята');
+  }
+  // задние: центры шаров на осях гнёзд LB, сторона по знаку Y
+  ['R', 'L'].forEach(side => {
+    const sg = side === 'R' ? 1 : -1;
+    const c = pts.filter(o => o.p.x > 1100 && o.p.x < 1300 && sg * o.p.y > 40 && sg * o.p.y < 130 && o.p.z > -200 && o.p.z < -140)
+      .sort((a, b) => score(b.path) - score(a.path));
+    if (!c.length) return;
+    const p = c[0].p, d = def[side];
+    if (Math.abs(p.x - d.x) <= 3 && Math.abs(p.y - d.y) <= 3) { set[side] = {x: p.x, y: p.y, z: p.z}; used.push(side + ': ' + c[0].path); }
+    else notes.push(c[0].path + ': точка не на гнезде LB (' + d.x + '; ' + d.y + ') — не взята');
+  });
+  if (!set.R && !set.L) {
+    const z = nums.find(o => /^(zr|zrear|rearz|ballz|zball|pivotz|zpivot|ballcentrez|ballcenterz)$/.test(o.key) && o.v > -200 && o.v < -140);
+    if (z) { set.R = {x: def.R.x, y: def.R.y, z: z.v}; set.L = {x: def.L.x, y: def.L.y, z: z.v}; used.push('Z задних опор: ' + z.path); }
+  }
+  const sp = nums.find(o => /spacer|проставк|raise|lift/.test(o.key) && o.v >= 20 && o.v <= 300);
+  if (sp) { set.spacer = sp.v; used.push('проставка: ' + sp.path); }
+  const an = nums.find(o => /tilt|angle|theta|pitch|угол|тангаж|наклон/.test(o.key) && /deg|град|angle|угол/.test(o.key) && o.v >= 2 && o.v <= 40);
+  if (an) set.angle = an.v;
+  return {set, used, notes};
+}
+
+/* ---------------------------------------------------------------- интерфейс */
+const $ = id => document.getElementById(id);
+const MINUS = '−';
+function fmt(v, d) {
+  if (v == null || !isFinite(v)) return '—';
+  const s = (Math.abs(v) < 0.5 * Math.pow(10, -d) ? 0 : v).toFixed(d);
+  return s.replace('-', MINUS).replace('.', ',');
+}
+function fmtS(v, d) {
+  if (v == null || !isFinite(v)) return '—';
+  const s = fmt(v, d);
+  return v > 0 && /[1-9]/.test(s) ? '+' + s : s;
+}
+function num(s) {
+  if (s == null) return null;
+  s = String(s).replace(/[\s ]/g, '').replace(',', '.').replace(/[−–]/g, '-');
+  if (s === '') return null;
+  const v = Number(s);
+  return isFinite(v) ? v : NaN;
+}
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const PILL = {ok: 'норма', warn: 'внимание', bad: 'вне допуска', na: 'нет данных', info: 'справка'};
+const pill = (lvl, txt) => '<span class="pill ' + lvl + '">' + esc(txt || PILL[lvl]) + '</span>';
+const worst = list => list.indexOf('bad') >= 0 ? 'bad' : list.indexOf('warn') >= 0 ? 'warn' : list.indexOf('ok') >= 0 ? 'ok' : 'na';
+
+let RIG = clone(CFG.rig);
+const RIGSRC = {state: 'pending', used: [], notes: [], angle: null, why: ''};
+const ATT = {lv: 'горизонтально', tl: 'с наклоном'};
+const COLS = [['F', 'передняя', 'палец HK'], ['R', 'задняя прав.', 'гнездо LB'], ['L', 'задняя лев.', 'гнездо LB']];
+const FIELDS = ['f-date', 'f-operator', 'f-tail', 'f-fuel', 'f-payload', 'f-ballast', 'f-alloy', 'f-target', 'f-note', 'g-spacer', 'g-pitch0', 'g-tilt'];
+const cid = (a, r, c) => a + '-' + r + '-' + c;
+const KEY = 'dwr5-cg-calc-v1';
+let selfSnap = null;
+
+function buildReadings(att) {
+  let h = '<thead><tr><th>Установка</th>' + COLS.map(c => '<th>' + c[0] + ', кг<small>' + c[1] + '</small></th>').join('') + '</tr></thead><tbody>';
+  for (let r = 0; r < 3; r++) {
+    h += '<tr><td>' + (r + 1) + '</td>' + COLS.map((c, k) => '<td><input id="' + cid(att, r, k) + '" type="text" inputmode="decimal" autocomplete="off" aria-label="' +
+      ATT[att] + ', установка ' + (r + 1) + ', ' + c[0] + ' ' + c[1] + ', кг"></td>').join('') + '</tr>';
+  }
+  h += '<tr class="avg sumrow"><td>Среднее</td>' + [0, 1, 2].map(k => '<td id="' + att + '-avg-' + k + '">—</td>').join('') + '</tr>';
+  h += '<tr><td>Разброс</td>' + [0, 1, 2].map(k => '<td id="' + att + '-spr-' + k + '">—</td>').join('') + '</tr>';
+  h += '<tr class="model"><td>Модель</td>' + [0, 1, 2].map(k => '<td id="' + att + '-exp-' + k + '">—</td>').join('') + '</tr></tbody>';
+  $('t-' + att).innerHTML = h;
+}
+
+function readInputs() {
+  const bad = [];
+  const val = (id, def, lo, hi, label) => {
+    const el = $(id), v = num(el.value);
+    let inv = false;
+    if (v == null) { el.removeAttribute('aria-invalid'); return def; }
+    if (isNaN(v) || v < lo || v > hi) { inv = true; bad.push(label + ': ожидается число ' + fmt(lo, 0) + '…' + fmt(hi, 0)); }
+    el.setAttribute('aria-invalid', inv ? 'true' : 'false');
+    return inv ? def : v;
+  };
+  const rows = att => [0, 1, 2].map(r => [0, 1, 2].map(k => {
+    const el = $(cid(att, r, k)), v = num(el.value);
+    const inv = v != null && (isNaN(v) || v < 0 || v > 500);
+    el.setAttribute('aria-invalid', inv ? 'true' : 'false');
+    if (inv) bad.push(ATT[att] + ', установка ' + (r + 1) + ', ' + COLS[k][0] + ': не число или вне 0…500 кг');
+    return inv ? NaN : v;
+  }));
+  const inp = {
+    level: rows('lv'), tilt: rows('tl'),
+    fuel: val('f-fuel', 0, 0, CFG.fuel.tank, 'Топливо, л'),
+    payload: $('f-payload').value === 'yes',
+    ballast: val('f-ballast', 0, 0, 10, 'Балласт, кг'),
+    alloy: $('f-alloy').value,
+    target: val('f-target', CFG.lim.target, 840, 1000, 'Цель X'),
+    spacer: val('g-spacer', RIG.spacer, 20, 300, 'Проставка, мм'),
+    pitch0: val('g-pitch0', 0, -5, 5, 'Тангаж горизонтально, °'),
+    tiltDeg: val('g-tilt', null, 2, 30, 'Тангаж при наклоне, °')
+  };
+  inp.bad = bad;
+  return inp;
+}
+
+// снимок того, что задаёт самопроверку: показания, конфигурация и стенд (любое изменение снимает отметку)
+function snapReadings() {
+  return ['lv', 'tl'].map(a => [0, 1, 2].map(r => [0, 1, 2].map(k => $(cid(a, r, k)).value).join('|')).join('/')).join('#') + '#' +
+    ['f-fuel', 'f-payload', 'f-ballast', 'f-alloy', 'g-spacer', 'g-pitch0', 'g-tilt'].map(id => $(id).value).join('|');
+}
+
+function save() {
+  try {
+    const o = {};
+    FIELDS.forEach(id => { o[id] = $(id).value; });
+    ['lv', 'tl'].forEach(a => { for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) o[cid(a, r, k)] = $(cid(a, r, k)).value; });
+    localStorage.setItem(KEY, JSON.stringify(o));
+  } catch (e) { /* без хранилища — просто не запоминаем */ }
+}
+function restore() {
+  try {
+    const o = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (o) Object.keys(o).forEach(id => { const el = $(id); if (el && typeof o[id] === 'string') el.value = o[id]; });
+  } catch (e) { /* ignore */ }
+  if (!$('f-date').value) {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    $('f-date').value = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+}
+
+function renderReadings(r, inp) {
+  ['lv', 'tl'].forEach(att => {
+    const a = r[att], exp = att === 'lv' ? r.expLevel : r.expTilt;
+    for (let k = 0; k < 3; k++) {
+      $(att + '-avg-' + k).textContent = a.n ? fmt(a.avg[k], 3) : '—';
+      const s = $(att + '-spr-' + k);
+      s.textContent = a.n > 1 ? fmt(a.spread[k], 3) : '—';
+      s.className = a.n > 1 && a.spread[k] > CFG.tol.spread ? 'hot' : '';
+      $(att + '-exp-' + k).textContent = exp ? (att === 'tl' && inp.fuel > 0 ? '≈' : '') + fmt(exp[k], 2) : '—';
+    }
+    let n = '';
+    if (a.n) n += 'Сумма <b>' + fmt(a.sum, 3) + ' кг</b> по ' + a.n + ' уст.';
+    else n += 'Нет полностью заполненных установок.';
+    if (exp) n += ' Модель для этой конфигурации: Σ ' + fmt(exp[0] + exp[1] + exp[2], 2) + ' кг.';
+    if (att === 'tl') n += ' Наклон ' + fmt(r.t1 / CORE.D, 2) + '° нос вверх (проставка ' + fmt(inp.spacer, 1) + ' мм).';
+    $('n-' + att).innerHTML = n;
+  });
+}
+
+function notesOf(r, inp) {
+  const out = [];
+  inp.bad.forEach(t => out.push(['bad', t]));
+  ['lv', 'tl'].forEach(att => {
+    const a = r[att];
+    a.partial.forEach(i => out.push(['warn', 'Показания ' + ATT[att] + ', установка ' + (i + 1) + ': заполнены не все три весов — установка не учтена.']));
+    if (a.n > 1) a.spread.forEach((s, k) => {
+      if (s > CFG.tol.spread) out.push(['warn', 'Разброс ' + COLS[k][0] + ' ' + ATT[att] + ' ' + fmt(s, 3) + ' кг (больше ' + fmt(CFG.tol.spread, 2) +
+        '): проверьте посадку на опорах и нули весов, повторите установку.']);
+    });
+    if (a.n === 1) out.push(['info', 'Показания ' + ATT[att] + ' — одна установка. По порядку взвешивания нужно три.']);
+  });
+  if (!isFinite(r.t1)) out.push(['bad', 'Угол наклона не считается: проверьте высоту проставки.']);
+  if (inp.tiltDeg != null && isFinite(r.tGeo) && Math.abs(inp.tiltDeg - r.tGeo / CORE.D) > CFG.tol.angle)
+    out.push(['warn', 'Тангаж по инклинометру ' + fmt(inp.tiltDeg, 2) + '° отличается от угла по проставке ' + fmt(r.tGeo / CORE.D, 2) +
+      '° больше чем на ' + fmt(CFG.tol.angle, 1) + '°: проверьте проставку, посадку гнёзд и уровень стенда. В расчёте взят тангаж по инклинометру.']);
+  if (inp.fuel > CFG.fuel.cap) out.push(['warn', 'Топлива больше ' + fmt(CFG.fuel.cap, 0) + ' л: центр топлива взят по последней строке таблицы (' + fmt(CFG.fuel.cap, 0) + ' л).']);
+  if (!r.ok) return out;
+  if (r.tl.n && !r.zMeasured) out.push(['warn', 'Показания с наклоном есть, но угол наклона не отличается от горизонтального — Z не считается.']);
+  if (r.zMeasured) {
+    if (Math.abs(r.W1 - r.w.m) > CFG.tol.sum) out.push(['warn', 'Сумма показаний с наклоном (' + fmt(r.W1, 2) + ' кг) отличается от горизонтальной (' + fmt(r.w.m, 2) +
+      ' кг) на ' + fmt(Math.abs(r.W1 - r.w.m), 2) + ' кг: проверьте нули весов и что самолёт ничего не касается.']);
+    if (Math.abs(r.Y1 - r.w.y) > CFG.tol.y) out.push(['warn', 'Y по наклону (' + fmt(r.Y1, 1) + ' мм) не совпадает с горизонтальным (' + fmt(r.w.y, 1) +
+      ' мм): проверьте, что R и L не перепутаны и самолёт не сместился в гнёздах.']);
+    if (inp.fuel > 0) out.push(['bad', 'Z недостоверен: при наклоне топливо в баке перетекает, а расчёт считает самолёт твёрдым телом. Для Z взвешивайте с пустым баком.']);
+    if (r.w.z < -150 || r.w.z > 100) out.push(['bad', 'Z = ' + fmt(r.w.z, 1) + ' мм неправдоподобен: проверьте показания с наклоном, высоту проставки и что поднята именно передняя опора.']);
+  }
+  if (!r.zMeasured && Math.abs(r.t0) > 0) out.push(['info', 'Без наклона Z не измерен; поправка X на тангаж ' + fmt(r.t0 / CORE.D, 2) + '° сделана с Z модели (' + fmt(r.model.z, 1) + ' мм).']);
+  const dm = r.w.m - r.model.m;
+  if (Math.abs(dm) > 3) out.push(['warn', 'Масса на стенде отличается от модели в этой конфигурации на ' + fmtS(dm, 2) + ' кг: проверьте введённые топливо, груз и балласт.']);
+  if (r.zf.m >= CFG.mtow) out.push(['bad', 'Масса без топлива ' + fmt(r.zf.m, 2) + ' кг не меньше MTOW ' + CFG.mtow + ' кг: заправка невозможна.']);
+  return out;
+}
+
+function renderResults(r, inp) {
+  const notes = notesOf(r, inp);
+  $('notes-wrap').hidden = !notes.length;
+  $('notes').innerHTML = notes.map(n => '<li>' + pill(n[0]) + '<span>' + esc(n[1]) + '</span></li>').join('');
+  // самопроверка
+  const st = $('selftest');
+  if (selfSnap && selfSnap === snapReadings() && r.ok) {
+    const M = CFG.model.zf, d = [r.w.m - M.m, r.w.x - M.x, r.w.y - M.y, r.zMeasured ? r.w.z - M.z : NaN];
+    const pass = Math.abs(d[0]) <= 0.005 && Math.abs(d[1]) <= 0.05 && Math.abs(d[2]) <= 0.05 && Math.abs(d[3]) <= 0.1;
+    st.className = 'banner ' + (pass ? 'ok' : 'bad'); st.hidden = false;
+    st.innerHTML = '<b>Самопроверка ' + (pass ? 'пройдена' : 'НЕ пройдена') + '.</b> Показания посчитаны по модели (без топлива, груз 30 кг, балласт 2,75 кг W) и округлены до 1 г; из них расчёт восстановил центр тяжести модели.' +
+      '<div class="bd">Масса ' + fmt(r.w.m, 3) + ' кг (модель ' + fmt(M.m, 3) + ') · X ' + fmt(r.w.x, 2) + ' (' + fmt(M.x, 2) + ') · Y ' + fmt(r.w.y, 2) + ' (' + fmt(M.y, 2) +
+      ') · Z ' + fmt(r.w.z, 2) + ' (' + fmt(M.z, 2) + ') мм. Расхождение: ' + fmtS(d[0], 4) + ' кг, ' + [1, 2, 3].map(i => fmtS(d[i], 3)).join(' / ') + ' мм.' +
+      ' Взлёт по таблице топлива: ' + fmt(r.to.L, 2) + ' л, X ' + fmt(r.to.s.x, 2) + ' (модель ' + fmt(CFG.model.to.L, 2) + ' л, X ' + fmt(CFG.model.to.x, 2) + ').</div>';
+  } else { st.hidden = true; if (selfSnap && selfSnap !== snapReadings()) selfSnap = null; }
+
+  $('res-empty').hidden = r.ok; $('res-body').hidden = !r.ok;
+  if (!r.ok) return;
+  const L = CFG.lim, w = r.w, zf = r.zf, to = r.to.s, bal = r.bal;
+  // проверки
+  const xs = [zf.x, to.x, r.burn.lo, r.burn.hi], xmax = Math.max.apply(null, xs), xmin = Math.min.apply(null, xs);
+  const cx = xmin >= L.xMin && xmax <= L.xMax ? 'ok' : 'bad';
+  const smMin = CORE.sm(CFG, xmax), csm = smMin >= L.smMin ? 'ok' : 'bad';
+  const cb = zf.x <= inp.target + 1e-9 ? 'ok' : 'bad';
+  const cz = !r.zMeasured ? 'na' : (inp.fuel > 0 ? 'warn' : (Math.abs(zf.z) <= L.zAbs && Math.abs(to.z) <= L.zAbs ? 'ok' : 'bad'));
+  const cy = r.j.zf.y;
+  const cm = zf.m >= CFG.mtow ? 'bad' : r.to.L < CFG.model.to.L - 0.5 ? 'warn' : 'ok';
+  const checks = [
+    [cx, 'Центровка X в допуске ' + L.xMin + '…' + L.xMax + ' мм', 'без топлива ' + fmt(zf.x, 1) + ' · взлёт ' + fmt(to.x, 1) + ' · при выработке ' + fmt(r.burn.lo, 1) + '…' + fmt(r.burn.hi, 1) + ' (расчётная ' + L.xDesign + ')'],
+    [csm, 'Запас устойчивости не меньше ' + L.smMin + ' % САХ', 'без топлива ' + fmt(CORE.sm(CFG, zf.x), 2) + ' % · взлёт ' + fmt(CORE.sm(CFG, to.x), 2) + ' % · наименьший ' + fmt(smMin, 2) + ' % (фокус X ' + L.np + ', САХ ' + fmt(L.mac, 1) + ')'],
+    [cb, 'Правило балласта: ЦТ без топлива не дальше X ' + fmt(inp.target, 1), 'сейчас X ' + fmt(zf.x, 1) + (cb === 'ok' ? '' : ' — добавить балласт, см. ниже')],
+    [cz, 'Высота ЦТ: |Z| не больше ' + L.zAbs + ' мм от плоскости крыла', r.zMeasured ? 'без топлива Z ' + fmt(zf.z, 1) + ' · взлёт ' + fmt(to.z, 1) + (inp.fuel > 0 ? ' — недостоверно, взвешивание с топливом' : '') : 'Z не измерен — нужны показания с наклоном'],
+    [cy, 'Боковое смещение |Y| до ' + L.yOk + ' мм', 'без топлива Y ' + fmt(zf.y, 1) + ' мм (модель ' + fmt(CFG.model.zf.y, 1) + '); до ' + L.yMax + ' мм — проверить триммирование по крену, больше — искать причину'],
+    [cm, 'Взлётная масса ' + CFG.mtow + ' кг и заправка', zf.m >= CFG.mtow ? 'масса без топлива ' + fmt(zf.m, 2) + ' кг — заправка невозможна' : 'заправка до MTOW ' + fmt(r.to.L, 1) + ' л (' + fmt(r.to.L * CFG.fuel.rho, 1) + ' кг); в модели ' + fmt(CFG.model.to.L, 1) + ' л']
+  ];
+  $('checks').innerHTML = checks.map(c => '<li>' + pill(c[0]) + '<span class="t">' + esc(c[1]) + '</span><span class="d">' + esc(c[2]) + '</span></li>').join('');
+  const all = worst(checks.map(c => c[0]).concat(notes.filter(n => n[0] !== 'info').map(n => n[0])));
+  const v = $('verdict');
+  v.className = 'banner ' + (all === 'na' ? 'ok' : all);
+  v.innerHTML = all === 'bad' ? '<b>Есть выход за допуск или ошибка ввода</b> — см. проверки и предупреждения.'
+    : all === 'warn' ? '<b>Центровка в допуске, но есть замечания</b> — см. ниже.' : '<b>Центровка в допуске.</b> Все проверки пройдены.';
+  // плитки: как стоит на стенде
+  const jw = r.j.w;
+  const tile = (lvl, k, val, unit, s) => '<div class="tile ' + lvl + '"><div class="k">' + k + '</div><div class="v">' + val + (unit ? ' <small>' + unit + '</small>' : '') + '</div><div class="s">' + s + '</div></div>';
+  $('tiles').innerHTML = [
+    tile('na', 'Масса на стенде', fmt(w.m, 2), 'кг', 'среднее по ' + r.lv.n + ' уст.'),
+    tile(jw.x, 'ЦТ X', fmt(w.x, 1), 'мм', fmt(CORE.mac(CFG, w.x), 1) + ' % САХ'),
+    tile(jw.sm, 'Запас устойчивости', fmt(CORE.sm(CFG, w.x), 1), '%', 'не меньше ' + L.smMin + ' %'),
+    tile(jw.y, 'ЦТ Y', fmt(w.y, 1), 'мм', 'вправо +, влево ' + MINUS),
+    tile(r.zMeasured ? (inp.fuel > 0 ? 'warn' : jw.z) : 'na', 'ЦТ Z', r.zMeasured ? fmt(w.z, 1) : '—', r.zMeasured ? 'мм' : '', r.zMeasured ? 'по наклону ' + fmt(r.t1 / CORE.D, 1) + '°' : 'нужен наклон'),
+    tile(cm, 'Взлётная заправка', fmt(r.to.L, 1), 'л', 'до ' + CFG.mtow + ' кг · X ' + fmt(to.x, 1))
+  ].join('');
+  // состояния (строки — величины, столбцы — состояния)
+  const cols = [['Как взвешен', w, inp.fuel, r.j.w], ['Без топлива, с грузом', zf, 0, r.j.zf], ['Взлёт, MTOW ' + CFG.mtow, to, r.to.L, r.j.to]];
+  const row = (lab, f) => '<tr><td>' + lab + '</td>' + cols.map(f).join('') + '</tr>';
+  $('t-states').innerHTML = '<thead><tr><th></th>' + cols.map(c => '<th>' + c[0] + '</th>').join('') + '</tr></thead><tbody>' +
+    row('Масса, кг', c => '<td>' + fmt(c[1].m, 2) + '</td>') +
+    row('Топливо, л', c => '<td>' + fmt(c[2], 1) + '</td>') +
+    row('X, мм', c => '<td class="' + c[3].x + '">' + fmt(c[1].x, 1) + '</td>') +
+    row('Y, мм', c => '<td class="' + c[3].y + '">' + fmt(c[1].y, 1) + '</td>') +
+    row('Z, мм', c => '<td class="' + (c[1].z == null ? '' : inp.fuel > 0 ? 'warn' : c[3].z) + '">' + fmt(c[1].z, 1) + '</td>') +
+    row('% САХ', c => '<td>' + fmt(CORE.mac(CFG, c[1].x), 1) + '</td>') +
+    row('Запас, % САХ', c => '<td class="' + c[3].sm + '">' + fmt(CORE.sm(CFG, c[1].x), 1) + '</td>') + '</tbody>';
+  // сравнение с моделью
+  const M = CFG.model.zf;
+  const mb = CORE.comb(M, CORE.stack(CFG, CFG.model.ballast.m, CFG.model.ballast.alloy), -1);
+  const cmp = (lab, a, b, d, dd) => '<tr><td>' + lab + '</td><td>' + fmt(a, d) + '</td><td>' + fmt(b, d) + '</td><td>' + (a == null || b == null ? '—' : fmtS(b - a, dd)) + '</td></tr>';
+  $('t-model').innerHTML = '<thead><tr><th>Без топлива, с грузом 30 кг</th><th>Модель</th><th>Измерено</th><th>Разница</th></tr></thead><tbody>' +
+    cmp('Масса, кг', M.m, zf.m, 2, 2) + cmp('X, мм', M.x, zf.x, 1, 1) + cmp('Y, мм', M.y, zf.y, 1, 1) + cmp('Z, мм', M.z, zf.z, 1, 1) +
+    cmp('% САХ', CORE.mac(CFG, M.x), CORE.mac(CFG, zf.x), 2, 2) + cmp('Запас, % САХ', CORE.sm(CFG, M.x), CORE.sm(CFG, zf.x), 2, 2) +
+    cmp('Без балласта: масса, кг', mb.m, bal.base.m, 2, 2) + cmp('Без балласта: X, мм', mb.x, bal.base.x, 1, 1) + '</tbody>';
+  $('model-note').textContent = 'Модель — build/mass_balance_r5.json: без топлива, груз 30 кг, балласт ' + fmt(CFG.model.ballast.m, 2) + ' кг (' + CFG.model.ballast.alloy +
+    '). «Измерено» — взвешенный самолёт, пересчитанный к этой конфигурации' + (inp.fuel > 0 ? ' (топливо ' + fmt(inp.fuel, 1) + ' л снято по таблице центров топлива)' : '') +
+    (inp.payload ? '' : ' (груз 30 кг добавлен в штатное место)') + ', с вашим балластом ' + fmt(inp.ballast, 2) + ' кг. Строки «без балласта» сравнивают планер без пакета пластин.';
+  renderBallast(r, inp);
+}
+
+function fitText(h) {
+  const B = CFG.ballast;
+  return h <= B.studs ? ['ok', 'помещается на нынешние шпильки (пакет до ' + B.studs + ' мм)']
+    : h <= B.studsS4 ? ['warn', 'на нынешние шпильки (' + B.studs + ' мм) НЕ помещается — нужны шпильки rev S4 (до ' + B.studsS4 + ' мм)']
+    : ['bad', 'НЕ помещается даже на шпильки rev S4 (' + B.studsS4 + ' мм)'];
+}
+
+function renderBallast(r, inp) {
+  const b = r.bal, B = CFG.ballast, T = fmt(inp.target, 1);
+  let h = '<div class="bal-main">';
+  if (!isFinite(b.m1)) {
+    h += '<div class="big">' + pill('bad') + ' Цель X ' + T + ' балластом на FR0 не достигается.</div>';
+  } else if (b.m1 === 0) {
+    h += '<div class="big">' + pill('ok') + ' Балласт не нужен: без пакета ЦТ без топлива X ' + fmt(b.base.x, 1) + ' — уже впереди цели X ' + T + '.</div>' +
+      '<p>Сейчас стоит ' + fmt(b.m0, 2) + ' кг. Его можно снять полностью (ЦТ без топлива уйдёт на X ' + fmt(b.base.x, 1) + ') или оставить для запаса.</p>';
+  } else {
+    const f = fitText(b.h1), more = b.dm > 0.0005, less = b.dm < -0.0005;
+    h += '<div class="big">' + pill(more ? f[0] : 'ok', more ? (f[0] === 'ok' ? 'добавить' : PILL[f[0]]) : (less ? 'запас' : 'норма')) + ' ' +
+      (more ? 'Добавить ' + fmt(b.dm, 3) + ' кг: балласт ' + fmt(b.m1, 3) + ' кг' : less ? 'Балласт в норме: нужно не меньше ' + fmt(b.m1, 3) + ' кг, стоит ' + fmt(b.m0, 3) + ' кг' : 'Балласт ровно на цели: ' + fmt(b.m1, 3) + ' кг') + '</div>' +
+      '<p>Пакет ' + inp.alloy + ': ' + fmt(b.h1, 1) + ' мм (сейчас ' + fmt(b.h0, 1) + ' мм) — ' + f[1] + '. С ним ЦТ без топлива ровно на X ' + T + ', взлёт: заправка ' + fmt(b.to.L, 1) +
+      ' л, X ' + fmt(b.to.s.x, 1) + ', запас ' + fmt(CORE.sm(CFG, b.to.s.x), 1) + ' % САХ.</p>';
+    if (less) h += '<p class="muted small">Снимать не обязательно: лишние ' + fmt(-b.dm, 3) + ' кг сдвигают ЦТ без топлива вперёд на ' + fmt(inp.target - r.zf.x, 1) + ' мм от цели.</p>';
+    if (more && f[0] !== 'ok') {
+      h += '<p>' + b.full.map(q => 'с полным пакетом ' + q.h + ' мм (' + fmt(q.m, 2) + ' кг ' + inp.alloy + ') ЦТ без топлива X ' + fmt(q.x, 1) +
+        (q.x > inp.target ? ', на ' + fmt(q.x - inp.target, 1) + ' мм за целью' : ' — цель достигается')).join('; ') + '.</p>';
+      h += '<p>' + (f[0] === 'bad' ? 'Нужны другие меры: ' : 'Другие варианты: ') + 'более плотный сплав (таблица ниже), перенос аккумуляторов вперёд или вторая станция балласта у FR1.</p>';
+    }
+  }
+  h += '</div>';
+  h += '<div class="tblwrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>Сплав</th><th>ρ, т/м³</th><th>Нужно, кг</th><th>Пакет, мм</th><th>Шпильки ' + B.studs + ' мм</th><th>rev S4, ' + B.studsS4 + ' мм</th></tr></thead><tbody>' +
+    b.alloys.map(a => {
+      const ok1 = a.h <= B.studs, ok2 = a.h <= B.studsS4;
+      return '<tr><td>' + a.alloy + (a.alloy === inp.alloy ? ' (сейчас)' : '') + '</td><td>' + fmt(a.rho, 2) + '</td><td>' + fmt(a.m, 3) + '</td><td>' + fmt(a.h, 1) + '</td><td class="' + (ok1 ? 'ok' : 'bad') + '">' + (ok1 ? 'да' : 'нет') +
+        '</td><td class="' + (ok2 ? 'ok' : 'bad') + '">' + (ok2 ? 'да' : 'нет') + '</td></tr>';
+    }).join('') + '</tbody></table></div>' +
+    '<p class="small muted">Пакет растёт назад от задней грани FR0 (X ' + fmt(B.x0, 0) + '), его центр сдвигается на половину высоты: высота = масса / (ρ · ' + fmt(B.area, 5) + ' м²). Без пакета: ' +
+    fmt(b.base.m, 2) + ' кг, X ' + fmt(b.base.x, 1) + '. Масса с запасом на целые пластины — по их толщине.</p>';
+  $('ballast').innerHTML = h;
+}
+
+function renderRig(r, inp) {
+  const P = CORE.lines(RIG);
+  const src = RIGSRC.state === 'file' ? 'Геометрия стенда: <b>из ' + esc(CFG.rig.file) + '</b>' + (RIGSRC.used.length ? ' (' + esc(RIGSRC.used.join('; ')) + ')' : ' — узнаваемых точек нет, взяты встроенные') + '.'
+    : RIGSRC.state === 'pending' ? 'Геометрия стенда: встроенные константы (читаю ' + esc(CFG.rig.file) + '…).'
+    : 'Геометрия стенда: <b>встроенные константы</b> (' + esc(CFG.rig.file) + ' не прочитан: ' + esc(RIGSRC.why) + ').';
+  $('rig-src').innerHTML = src + (RIGSRC.notes.length ? ' <span class="muted">' + esc(RIGSRC.notes.join('; ')) + '</span>' : '');
+  $('t-rig').innerHTML = '<thead><tr><th>Опора</th><th>X</th><th>Y</th><th>Z</th><th>Линия реакции</th></tr></thead><tbody>' +
+    '<tr><td>F — палец HK Ø' + fmt(2 * RIG.F.pinR, 0) + '</td><td>' + fmt(RIG.F.x, 1) + '</td><td>' + fmt(RIG.F.y, 1) + '</td><td>' + fmt(RIG.F.z, 1) + '</td><td>ось пальца, Z ' + fmt(P.F.z, 1) + '</td></tr>' +
+    '<tr><td>R — гнездо LB, правое</td><td>' + fmt(RIG.R.x, 1) + '</td><td>' + fmt(RIG.R.y, 1) + '</td><td>' + fmt(RIG.R.z, 1) + '</td><td>центр шаровой опоры</td></tr>' +
+    '<tr><td>L — гнездо LB, левое</td><td>' + fmt(RIG.L.x, 1) + '</td><td>' + fmt(RIG.L.y, 1) + '</td><td>' + fmt(RIG.L.z, 1) + '</td><td>центр шаровой опоры</td></tr></tbody>';
+  const deg = r.t1 / CORE.D, geo = r.tGeo / CORE.D;
+  let a = 'Наклон: передняя опора выше на ' + fmt(inp.spacer, 1) + ' мм → тангаж по геометрии <b>' + fmt(geo, 3) + '°</b> нос вверх' + (r.t0 ? ' (от ' + fmt(r.t0 / CORE.D, 2) + '°)' : '') +
+    '; палец HK уходит назад на ' + fmt(r.travel, 1) + ' мм.';
+  if (inp.tiltDeg != null) a += ' В расчёте — тангаж по инклинометру ' + fmt(deg, 2) + '°.';
+  if (RIGSRC.angle != null) a += ' В ' + esc(CFG.rig.file) + ' указан угол ' + fmt(RIGSRC.angle, 2) + '°.';
+  $('rig-angle').innerHTML = a;
+  ['p-spacer', 'p-spacer2'].forEach(id => { $(id).textContent = fmt(inp.spacer, 0); });
+  $('p-angle').textContent = fmt(deg, 1); $('p-travel').textContent = fmt(r.travel, 1);
+  // чувствительность Z к ошибкам (по текущим показаниям или по модели)
+  if (isFinite(r.t1)) {
+    const base = {level: [r.expLevel], tilt: [r.expTilt]};
+    const sIn = r.ok && r.zMeasured ? {level: [r.lv.avg], tilt: [r.tl.avg]} : base;
+    const run = (mod, rig) => CORE.compute(CFG, rig || RIG, Object.assign({}, inp, sIn, mod)).w;
+    const w0 = run({});
+    if (w0 && w0.z != null) {
+      const ds = run({tiltDeg: null, spacer: inp.spacer + 1}).z - (inp.tiltDeg != null ? run({tiltDeg: null}).z : w0.z);
+      const da = run({tiltDeg: deg + 0.1}).z - w0.z;
+      const lvp = sIn.level[0].slice(); lvp[0] += 0.01;
+      const dr = run({level: [lvp]});
+      const tlp = sIn.tilt[0].slice(); tlp[0] += 0.01;
+      const dt = run({tilt: [tlp]}).z - w0.z;
+      const rz = clone(RIG); rz.R.z += 1; rz.L.z += 1;
+      const dzr = run({}, rz).z - w0.z;
+      $('rig-sens').textContent = 'Точность Z: проставка +1 мм → ' + fmtS(ds, 2) + ' мм; тангаж +0,1° → ' + fmtS(da, 2) + ' мм; +10 г на F горизонтально → Z ' + fmtS(dr.z - w0.z, 2) +
+        ', X ' + fmtS(dr.x - w0.x, 3) + ' мм; +10 г на F при наклоне → Z ' + fmtS(dt, 2) + ' мм; задние опоры выше на 1 мм → ' + fmtS(dzr, 2) + ' мм.';
+    }
+  } else $('rig-sens').textContent = '';
+}
+
+/* ---------------------------------------------------------------- протокол для печати */
+function renderRecord(r, inp) {
+  const d = $('f-date').value, dd = d ? d.split('-').reverse().join('.') : '____________';
+  const kv = rows => '<table class="kv"><tbody>' + rows.map(x => '<tr><td>' + esc(x[0]) + '</td><td>' + x[1] + '</td></tr>').join('') + '</tbody></table>';
+  const rd = att => {
+    const a = r[att], vals = [0, 1, 2].map(i => [0, 1, 2].map(k => $(cid(att, i, k)).value.trim()));
+    if (!vals.some(v => v.some(Boolean))) return '<p>не взвешивался</p>';
+    return '<table><thead><tr><th>Установка</th><th>F, кг</th><th>R, кг</th><th>L, кг</th><th>Сумма, кг</th></tr></thead><tbody>' +
+      vals.map((v, i) => '<tr><td>' + (i + 1) + '</td>' + v.map(x => '<td>' + esc(x || '—') + '</td>').join('') + '<td>' +
+        (v.every(Boolean) ? fmt(v.reduce((s, x) => s + num(x), 0), 3) : '—') + '</td></tr>').join('') +
+      (a.n ? '<tr><td><b>Среднее</b></td>' + a.avg.map(x => '<td><b>' + fmt(x, 3) + '</b></td>').join('') + '<td><b>' + fmt(a.sum, 3) + '</b></td></tr>' : '') +
+      (a.n > 1 ? '<tr><td>Разброс</td>' + a.spread.map(x => '<td>' + fmt(x, 3) + '</td>').join('') + '<td></td></tr>' : '') + '</tbody></table>';
+  };
+  let h = '<h1>Протокол взвешивания · DeltaWing DW-R5</h1>' +
+    kv([['Дата', esc(dd)], ['Оператор', esc($('f-operator').value) || '____________________'], ['Борт / заводской №', esc($('f-tail').value) || '____________________']]) +
+    '<h4>Конфигурация</h4>' + kv([
+      ['Топливо на борту', fmt(inp.fuel, 1) + ' л (' + fmt(inp.fuel * CFG.fuel.rho, 2) + ' кг)'],
+      ['Груз 30 кг', inp.payload ? 'установлен' : 'не установлен'],
+      ['Носовой балласт', fmt(inp.ballast, 3) + ' кг, ' + esc(inp.alloy) + ' (' + fmt(CFG.alloys[inp.alloy], 2) + ' т/м³), пакет ' + fmt(CORE.stack(CFG, inp.ballast, inp.alloy).h, 1) + ' мм'],
+      ['Цель ЦТ без топлива', 'X ' + fmt(inp.target, 1) + ' мм'],
+      ['Стенд', (RIGSRC.state === 'file' ? esc(CFG.rig.file) : 'встроенные константы') + '; F (' + fmt(RIG.F.x, 1) + '; ' + fmt(RIG.F.y, 1) + '; ' + fmt(RIG.F.z, 1) + '), R (' +
+        fmt(RIG.R.x, 1) + '; ' + fmt(RIG.R.y, 1) + '; ' + fmt(RIG.R.z, 1) + '), L (' + fmt(RIG.L.x, 1) + '; ' + fmt(RIG.L.y, 1) + '; ' + fmt(RIG.L.z, 1) + ')'],
+      ['Наклон', 'проставка ' + fmt(inp.spacer, 1) + ' мм, тангаж ' + fmt(r.t1 / CORE.D, 2) + '°' + (inp.tiltDeg != null ? ' (по инклинометру)' : ' (по геометрии)') +
+        (r.t0 ? '; горизонтально ' + fmt(r.t0 / CORE.D, 2) + '°' : '')],
+      ['Примечание', esc($('f-note').value) || '—']]) +
+    '<h4>Показания весов</h4><div class="two"><div><b>Горизонтально</b>' + rd('lv') + '</div><div><b>С наклоном</b>' + rd('tl') + '</div></div>';
+  if (r.ok) {
+    const zf = r.zf, to = r.to.s, M = CFG.model.zf, b = r.bal;
+    const st = [['Как взвешен', r.w, inp.fuel], ['Без топлива, с грузом', zf, 0], ['Взлёт, MTOW ' + CFG.mtow, to, r.to.L]];
+    h += '<h4>Результаты</h4><table><thead><tr><th>Состояние</th><th>Масса, кг</th><th>Топливо, л</th><th>X, мм</th><th>Y, мм</th><th>Z, мм</th><th>% САХ</th><th>Запас, %</th></tr></thead><tbody>' +
+      st.map(s => '<tr><td>' + s[0] + '</td><td>' + fmt(s[1].m, 2) + '</td><td>' + fmt(s[2], 1) + '</td><td>' + fmt(s[1].x, 1) + '</td><td>' + fmt(s[1].y, 1) + '</td><td>' + fmt(s[1].z, 1) +
+        '</td><td>' + fmt(CORE.mac(CFG, s[1].x), 1) + '</td><td>' + fmt(CORE.sm(CFG, s[1].x), 1) + '</td></tr>').join('') +
+      '<tr><td>Модель, без топлива</td><td>' + fmt(M.m, 2) + '</td><td>0,0</td><td>' + fmt(M.x, 1) + '</td><td>' + fmt(M.y, 1) + '</td><td>' + fmt(M.z, 1) + '</td><td>' + fmt(CORE.mac(CFG, M.x), 1) +
+      '</td><td>' + fmt(CORE.sm(CFG, M.x), 1) + '</td></tr></tbody></table>' +
+      '<p>Выработка топлива от взлёта до нуля: X ' + fmt(r.burn.lo, 1) + '…' + fmt(r.burn.hi, 1) + ' мм. Допуск X ' + CFG.lim.xMin + '…' + CFG.lim.xMax + ', запас не меньше ' + CFG.lim.smMin + ' % САХ, |Z| до ' + CFG.lim.zAbs + ' мм.</p>' +
+      '<h4>Проверки</h4><ul>' + Array.prototype.map.call($('checks').children, li => '<li>' + esc(li.querySelector('.pill').textContent) + ' — ' + esc(li.querySelector('.t').textContent) + ': ' + esc(li.querySelector('.d').textContent) + '</li>').join('') + '</ul>' +
+      '<h4>Балласт</h4><p>' + esc($('ballast').querySelector('.bal-main').innerText.replace(/\s*\n\s*/g, ' ')) + '</p>';
+    const ns = notesOf(r, inp);
+    if (ns.length) h += '<h4>Предупреждения</h4><ul>' + ns.map(n => '<li>' + esc(n[1]) + '</li>').join('') + '</ul>';
+  } else h += '<p>Расчёта нет: не введены показания в горизонтальном положении.</p>';
+  h += '<div class="sign"><div>Взвешивал</div><div>Проверил</div><div>Дата, подпись</div></div>' +
+    '<div class="foot">' + esc(CFG.version) + ' · модель build/mass_balance_r5.json: без топлива ' + fmt(CFG.model.zf.m, 2) + ' кг, X ' + fmt(CFG.model.zf.x, 2) + ' · стенд: ' +
+    (RIGSRC.state === 'file' ? esc(CFG.rig.file) : 'встроенные константы') + '</div>';
+  $('record').innerHTML = h;
+}
+
+/* ---------------------------------------------------------------- обновление, кнопки, загрузка */
+function update() {
+  const inp = readInputs();
+  const B = CORE.stack(CFG, inp.ballast, inp.alloy);
+  $('h-fuel').textContent = inp.fuel > 0 ? fmt(inp.fuel * CFG.fuel.rho, 2) + ' кг, центр X ' + fmt(CORE.fuelAt(CFG.fuel, inp.fuel).x, 1) + ', Z ' + fmt(CORE.fuelAt(CFG.fuel, inp.fuel).z, 1) : 'бак пуст';
+  $('h-ballast').textContent = 'пакет ' + fmt(B.h, 1) + ' мм, центр X ' + fmt(B.x, 1);
+  const r = CORE.compute(CFG, RIG, inp);
+  renderReadings(r, inp);
+  renderResults(r, inp);
+  renderRig(r, inp);
+  renderRecord(r, inp);
+  save();
+}
+
+function selfTest() {
+  $('f-fuel').value = '0'; $('f-payload').value = 'yes'; $('f-ballast').value = fmt(CFG.model.ballast.m, 2); $('f-alloy').value = CFG.model.ballast.alloy;
+  $('f-target').value = fmt(CFG.lim.target, 0);
+  const r = CORE.compute(CFG, RIG, readInputs());
+  for (let i = 0; i < 3; i++) for (let k = 0; k < 3; k++) {
+    $(cid('lv', i, k)).value = fmt(r.expLevel[k], 3);
+    $(cid('tl', i, k)).value = r.expTilt ? fmt(r.expTilt[k], 3) : '';
+  }
+  selfSnap = snapReadings();
+  update();
+  $('selftest').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
+async function loadRig() {
+  try {
+    const res = await fetch(CFG.rig.file, {cache: 'no-store'});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const j = await res.json();
+    const p = parseRig(j, CFG.rig);
+    ['F', 'R', 'L'].forEach(k => { if (p.set[k]) RIG[k] = Object.assign({}, RIG[k], p.set[k]); });
+    if (p.set.spacer) RIG.spacer = p.set.spacer;
+    RIGSRC.state = 'file'; RIGSRC.used = p.used; RIGSRC.notes = p.notes; RIGSRC.angle = p.set.angle != null ? p.set.angle : null;
+    $('g-spacer').placeholder = fmt(RIG.spacer, 1);
+  } catch (e) {
+    RIGSRC.state = 'builtin';
+    RIGSRC.why = location.protocol === 'file:' ? 'страница открыта как файл, браузер не даёт читать соседние файлы' : (e && e.message ? e.message : 'нет файла');
+  }
+  update();
+}
+
+function init() {
+  buildReadings('lv'); buildReadings('tl');
+  restore();
+  document.addEventListener('input', e => { if (e.target.matches('input,select')) update(); });
+  document.addEventListener('change', e => { if (e.target.matches('select,input[type=date]')) update(); });
+  $('btn-selftest').addEventListener('click', selfTest);
+  $('btn-clear').addEventListener('click', () => {
+    if (!confirm('Очистить все показания весов?')) return;
+    ['lv', 'tl'].forEach(a => { for (let i = 0; i < 3; i++) for (let k = 0; k < 3; k++) $(cid(a, i, k)).value = ''; });
+    selfSnap = null; update();
+  });
+  $('btn-print').addEventListener('click', () => { update(); window.print(); });
+  window.addEventListener('beforeprint', update);
+  $('foot').innerHTML = esc(CFG.version) + '. Модель: build/mass_balance_r5.json — без топлива ' + fmt(CFG.model.zf.m, 2) + ' кг, X ' + fmt(CFG.model.zf.x, 2) + ', Y ' + fmt(CFG.model.zf.y, 2) +
+    ', Z ' + fmt(CFG.model.zf.z, 2) + '; пустой с балластом ' + fmt(CFG.model.oew.m, 2) + ' кг, X ' + fmt(CFG.model.oew.x, 1) + '. Введённое хранится только в этом браузере.';
+  update();
+  loadRig();
+}
+init();
+</script>
+</body>
+</html>
